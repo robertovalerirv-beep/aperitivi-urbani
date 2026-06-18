@@ -1,0 +1,64 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <style is:global>
+      :root {
+        --fg: #1a1a1a;
+        --bg: #fafaf7;
+        --accent: #b8341f;
+        --muted: #6b6b6b;
+        --border: #e5e5e0;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+        line-height: 1.6;
+      }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      header.site {
+        border-bottom: 1px solid var(--border);
+        padding: 1.5rem 2rem;
+      }
+      header.site h1 { margin: 0; font-size: 1.4rem; letter-spacing: -0.01em; }
+      header.site p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.95rem; }
+      main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+      footer.site {
+        border-top: 1px solid var(--border);
+        padding: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-top: 4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <h1><a href="/">Aperitivi Urbani</a></h1>
+      <p>Le recensioni di locali milanesi di Valeria Carbone</p>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site">
+      <p>Contenuti riprodotti su licenza dell'autrice — <a href="https://www.instagram.com/aperitivi_urbani/">@aperitivi_urbani</a></p>
+    </footer>
+  </body>
+</html>

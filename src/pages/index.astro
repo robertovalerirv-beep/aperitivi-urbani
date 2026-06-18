@@ -1,0 +1,41 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "../layouts/Layout.astro";
+
+const locali = await getCollection("locali");
+
+locali.sort((a, b) => {
+  const da = a.data.visite[a.data.visite.length - 1].data;
+  const db = b.data.visite[b.data.visite.length - 1].data;
+  return db.localeCompare(da);
+});
+---
+
+<Layout title="Aperitivi Urbani — Locali recensiti a Milano" description="Le recensioni di locali milanesi di @aperitivi_urbani">
+  <h2 style="margin-top:0">Tutti i locali</h2>
+  <p style="color:var(--muted)">{locali.length} {locali.length === 1 ? "locale" : "locali"} recensiti</p>
+
+  <ul style="list-style:none;padding:0;display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+    {locali.map((loc) => {
+      const ultima = loc.data.visite[loc.data.visite.length - 1];
+      return (
+        <li style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;background:white">
+          <a href={`/locali/${loc.data.slug}/`} style="font-size:1.15rem;font-weight:600;color:var(--fg)">
+            {loc.data.nome}
+          </a>
+          <div style="color:var(--muted);font-size:0.9rem;margin-top:0.25rem">
+            {loc.data.zona ?? "Milano"} · {loc.data.tipo.join(", ")}
+          </div>
+          {loc.data.voto_dedotto != null && (
+            <div style="margin-top:0.5rem;color:var(--accent);font-weight:600">
+              {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
+            </div>
+          )}
+          <div style="font-size:0.85rem;color:var(--muted);margin-top:0.5rem">
+            ultima visita: {ultima.data}
+          </div>
+        </li>
+      );
+    })}
+  </ul>
+</Layout>
