@@ -27,6 +27,7 @@ const visita = z.object({
   caption: z.string(),
   foto: z.array(z.string()).default([]),
   issue: z.number().int().optional(),
+  fonte_tipo: z.enum(["singola", "lista"]).default("singola"),
 });
 
 const locali = defineCollection({

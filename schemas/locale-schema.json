@@ -104,6 +104,11 @@
             "type": "integer",
             "minimum": 1,
             "description": "Numero della GitHub Issue da cui è stata generata questa visita."
+          },
+          "fonte_tipo": {
+            "enum": ["singola", "lista"],
+            "default": "singola",
+            "description": "'singola' = post dedicato a questo locale; 'lista' = post che cita più locali (es. roundup, classifica). Per le visite 'lista' è atteso che molti campi del locale siano null, perché il post non fornisce dettagli specifici."
           }
         }
       }

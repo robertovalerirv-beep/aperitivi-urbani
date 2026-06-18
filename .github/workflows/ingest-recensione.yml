@@ -60,20 +60,50 @@ jobs:
                non è desumibile, mettilo a null. NON inventare.
             3. sponsorizzato = true SOLO con segnali espliciti (#adv, #ad,
                #sponsored, "in collaborazione con", "gifting"). Default: false.
-            4. Determina lo slug dal nome del locale (lowercase, kebab-case).
-            5. Se content/locali/<slug>.md esiste già: AGGIUNGI una entry
+            4. CLASSIFICA il post in due categorie prima di estrarre:
+               - "singola": post dedicato a UN locale (testo descrittivo, opinioni,
+                 piatti/drink citati, tono riconoscibile).
+               - "lista": post-riepilogo che cita PIÙ locali distinti (es. "23
+                 colazioni a Milano", classifiche, roundup tematici). Tipicamente
+                 ogni locale ha solo nome/account IG ed eventuale indirizzo, senza
+                 testo dedicato.
+               Per i post "lista" NON scartare: itera sui locali citati e applica
+               le regole 5-8 a OGNUNO di essi separatamente. Per ciascun locale di
+               un post "lista" estrai SOLO nome e (se presente) zona/indirizzo;
+               tutti gli altri campi opzionali del locale (fascia_prezzo, sentiment,
+               voto_dedotto, piatti_drink_citati = []) restano null/vuoti perché il
+               post non li fornisce per il singolo locale — è coerente con la
+               regola 2 "non inventare", non un errore di estrazione.
+            5. Determina lo slug dal nome del locale (lowercase, kebab-case).
+            6. Se content/locali/<slug>.md esiste già: AGGIUNGI una entry
                all'array `visite[]` nel frontmatter, NON sovrascrivere il file.
                Se non esiste: crea un nuovo file MD con frontmatter conforme
-               allo schema, e corpo Markdown contenente la caption formattata.
-            6. Sposta le foto da public/img/locali/_tmp/ a
+               allo schema, e corpo Markdown contenente la caption formattata
+               (per i post "lista" puoi mettere nel corpo solo la riga
+               pertinente del locale, non l'intera caption del roundup).
+               In OGNI nuova entry di `visite[]` valorizza il campo `fonte_tipo`
+               con "singola" o "lista" coerentemente con la classificazione del
+               punto 4. È il segnale per il revisore che molti campi sono null
+               per design, non per estrazione fallita.
+            7. Sposta le foto da public/img/locali/_tmp/ a
                public/img/locali/<slug>/ rinominandole foto-1.jpg, foto-2.jpg…
-               Aggiorna i path nel campo `foto` della visita.
-            7. Aggiorna `ultima_estrazione` con il timestamp ISO 8601 corrente.
-            8. NON modificare alcun file fuori da:
+               Aggiorna i path nel campo `foto` della visita. Per i post "lista"
+               le foto del roundup di solito NON sono attribuibili al singolo
+               locale: lascia `foto: []` su tutte le entry generate, a meno che
+               sia evidente l'abbinamento foto↔locale.
+            8. Aggiorna `ultima_estrazione` con il timestamp ISO 8601 corrente
+               su ogni file toccato.
+            9. NON modificare alcun file fuori da:
                - content/locali/
                - public/img/locali/
-            9. Al termine stampa un riepilogo: slug, se è nuovo locale o
-               aggiornamento, campi lasciati null, eventuali ambiguità.
+            10. Al termine stampa un riepilogo che includa:
+                - tipo di post processato ("singola" o "lista")
+                - numero di locali nuovi creati e numero di locali aggiornati
+                - elenco completo degli slug toccati con marker [NEW]/[UPD]
+                - campi lasciati null e ambiguità rilevate (raggruppati per slug
+                  se sono molti)
+                Esempio per un post lista: "Tipo: lista. 12 nuovi, 3 aggiornati.
+                Slug: bar-luce [NEW], pavé [UPD], …"
 
             Lo schema è in schemas/locale-schema.json — leggilo prima di
             scrivere qualsiasi cosa.
