@@ -32,7 +32,8 @@ jobs:
       - name: Estrai allegati immagine dall'issue
         id: attachments
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
           mkdir -p public/img/locali/_tmp
