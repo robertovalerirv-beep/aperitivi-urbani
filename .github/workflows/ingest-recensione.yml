@@ -47,6 +47,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: '--allowedTools Read,Write,Edit,Glob,Grep,Bash'
+          show_full_output: true
           # Il workflow non deve toccare nulla fuori da content/ e public/img/locali/
           prompt: |
             Sei l'agente di ingestion del sito Aperitivi Urbani.
