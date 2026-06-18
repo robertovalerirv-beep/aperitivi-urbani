@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aperitiviurbani.example/schemas/locale.json",
+  "title": "Locale",
+  "description": "Scheda di un locale recensito da @aperitivi_urbani. 1 file MD per locale; visite multiple si accumulano in `visite[]`.",
+  "type": "object",
+  "required": ["slug", "nome", "zona", "tipo", "visite"],
+  "additionalProperties": false,
+  "properties": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Identificatore URL-safe, generato dal nome del locale."
+    },
+    "nome": {
+      "type": "string",
+      "minLength": 1
+    },
+    "zona": {
+      "type": ["string", "null"],
+      "description": "Quartiere/zona di Milano (es. Isola, NoLo, Brera, Porta Romana). null se non desumibile dalla caption."
+    },
+    "indirizzo": {
+      "type": ["string", "null"]
+    },
+    "citta": {
+      "type": "string",
+      "default": "Milano"
+    },
+    "tipo": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "aperitivo",
+          "ristorante",
+          "cocktail-bar",
+          "wine-bar",
+          "bistrot",
+          "trattoria",
+          "pizzeria",
+          "caffetteria",
+          "altro"
+        ]
+      }
+    },
+    "fascia_prezzo": {
+      "enum": ["€", "€€", "€€€", "€€€€", null],
+      "description": "Dedotta dalla caption se citata esplicitamente o se ci sono prezzi indicativi. null altrimenti."
+    },
+    "piatti_drink_citati": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Estratti testualmente dalla caption. Niente invenzioni."
+    },
+    "sentiment": {
+      "enum": ["entusiasta", "positivo", "neutro", "tiepido", "critico", null],
+      "description": "Dedotto dal tono della caption. null se ambiguo."
+    },
+    "voto_dedotto": {
+      "type": ["number", "null"],
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Conversione del sentiment in scala 1–5. Mapping di riferimento: entusiasta=5, positivo=4, neutro=3, tiepido=2, critico=1. null se sentiment è null."
+    },
+    "sponsorizzato": {
+      "type": "boolean",
+      "default": false,
+      "description": "true SOLO se la caption contiene segnali espliciti: #adv, #ad, #sponsored, 'in collaborazione con', 'collab', gifting dichiarato. In dubbio: false."
+    },
+    "visite": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["data", "post_url", "caption"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "date",
+            "description": "Data del post Instagram (YYYY-MM-DD)."
+          },
+          "post_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://(www\\.)?instagram\\.com/"
+          },
+          "caption": {
+            "type": "string",
+            "minLength": 1
+          },
+          "foto": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Path relativo a public/, es. /img/locali/<slug>/foto-1.jpg"
+            },
+            "default": []
+          },
+          "issue": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numero della GitHub Issue da cui è stata generata questa visita."
+          }
+        }
+      }
+    },
+    "ultima_estrazione": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp ISO 8601 dell'ultimo run dell'automazione su questo file."
+    }
+  }
+}

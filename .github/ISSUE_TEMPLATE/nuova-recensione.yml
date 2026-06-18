@@ -1,0 +1,62 @@
+name: Nuova recensione
+description: Inserisci un post di @aperitivi_urbani nel sito
+title: "[Recensione] "
+labels: ["recensione"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Compila tutti i campi obbligatori. L'automazione genererà una Pull Request
+        con la scheda del locale. **Non incollare screenshot della caption**:
+        serve il testo integrale per l'estrazione.
+
+  - type: input
+    id: post_url
+    attributes:
+      label: URL del post Instagram
+      description: Link diretto al post (es. https://www.instagram.com/p/XXXXXX/)
+      placeholder: https://www.instagram.com/p/XXXXXXXXXXX/
+    validations:
+      required: true
+
+  - type: input
+    id: data
+    attributes:
+      label: Data del post
+      description: Formato YYYY-MM-DD
+      placeholder: "2026-06-18"
+    validations:
+      required: true
+
+  - type: textarea
+    id: caption
+    attributes:
+      label: Caption integrale
+      description: Incolla qui il testo completo della caption, inclusi hashtag e menzioni.
+      render: markdown
+    validations:
+      required: true
+
+  - type: input
+    id: nome_locale_hint
+    attributes:
+      label: Nome del locale (opzionale)
+      description: Se lo sai già, scrivilo qui. Altrimenti lo estrae Claude dalla caption.
+    validations:
+      required: false
+
+  - type: textarea
+    id: foto
+    attributes:
+      label: Foto del locale (opzionale)
+      description: Trascina qui una o più foto. GitHub le caricherà come allegati e l'automazione le sposterà in `public/img/locali/<slug>/`.
+    validations:
+      required: false
+
+  - type: textarea
+    id: note
+    attributes:
+      label: Note per il revisore
+      description: Eventuali dettagli da segnalare a chi farà la review della PR.
+    validations:
+      required: false
