@@ -68,6 +68,26 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
       ))}
     </section>
 
+    {loc.data.indirizzo && (
+      <section style="margin-top:2rem">
+        <h3>Dove si trova</h3>
+        <p class="muted" style="font-size:0.95rem;margin-bottom:0.75rem">
+          {loc.data.indirizzo}{loc.data.citta ? `, ${loc.data.citta}` : ""}
+        </p>
+        <div style="border-radius:10px;overflow:hidden;border:1px solid var(--cream-border)">
+          <iframe
+            width="100%"
+            height="320"
+            style="border:0;display:block"
+            loading="lazy"
+            allowfullscreen
+            referrerpolicy="no-referrer-when-downgrade"
+            src={`https://maps.google.com/maps?q=${encodeURIComponent((loc.data.indirizzo ?? "") + ", " + (loc.data.citta ?? "Milano"))}&output=embed`}
+          ></iframe>
+        </div>
+      </section>
+    )}
+
     <section style="margin-top:2rem">
       <Content />
     </section>

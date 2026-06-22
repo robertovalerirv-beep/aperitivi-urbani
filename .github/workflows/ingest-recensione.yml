@@ -61,6 +61,9 @@ jobs:
                non è desumibile, mettilo a null. NON inventare.
             3. sponsorizzato = true SOLO con segnali espliciti (#adv, #ad,
                #sponsored, "in collaborazione con", "gifting"). Default: false.
+            3bis. `indirizzo`: cerca l'indirizzo fisico reale del locale usando
+               nome e città. Formato: "Via Roma 12". Solo via e numero civico,
+               senza CAP né città. null se non sei sicuro.
             4. CLASSIFICA il post in due categorie prima di estrarre:
                - "singola": post dedicato a UN locale (testo descrittivo, opinioni,
                  piatti/drink citati, tono riconoscibile).
