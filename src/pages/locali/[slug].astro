@@ -16,56 +16,68 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
 ---
 
 <Layout title={`${loc.data.nome} — Aperitivi Urbani`} description={`Recensione di ${loc.data.nome} a ${loc.data.zona ?? "Milano"}`}>
-  <p><a href="/">← tutti i locali</a></p>
+  <p><a href="/" style="color:var(--accent-soft)">← tutti i locali</a></p>
 
-  <h2 style="margin-bottom:0.25rem">{loc.data.nome}</h2>
-  <p style="color:var(--muted);margin-top:0">
-    {loc.data.zona ?? "Milano"}
-    {loc.data.indirizzo && <> · {loc.data.indirizzo}</>}
-    {" · "}{loc.data.tipo.join(", ")}
-    {loc.data.fascia_prezzo && <> · {loc.data.fascia_prezzo}</>}
-  </p>
-
-  {loc.data.voto_dedotto != null && (
-    <p style="color:var(--accent);font-size:1.2rem;font-weight:600;margin:0.5rem 0">
-      {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
-      {loc.data.sentiment && <span style="color:var(--muted);font-weight:400;font-size:0.9rem;margin-left:0.5rem">— tono: {loc.data.sentiment}</span>}
+  <article class="card scheda">
+    <h2 style="margin:0 0 0.25rem">{loc.data.nome}</h2>
+    <p class="muted" style="margin-top:0">
+      {loc.data.zona ?? "Milano"}
+      {loc.data.indirizzo && <> · {loc.data.indirizzo}</>}
+      {" · "}{loc.data.tipo.join(", ")}
+      {loc.data.fascia_prezzo && <> · {loc.data.fascia_prezzo}</>}
     </p>
-  )}
 
-  {loc.data.sponsorizzato && (
-    <p style="background:#fff3cd;border-left:3px solid #b8341f;padding:0.5rem 1rem;font-size:0.9rem">
-      Contenuto sponsorizzato / in collaborazione (come dichiarato nel post originale)
-    </p>
-  )}
+    {loc.data.voto_dedotto != null && (
+      <p class="stars" style="font-size:1.3rem;margin:0.5rem 0">
+        {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
+        {loc.data.sentiment && <span class="muted" style="font-weight:400;font-size:0.9rem;margin-left:0.5rem">— tono: {loc.data.sentiment}</span>}
+      </p>
+    )}
 
-  {loc.data.piatti_drink_citati.length > 0 && (
+    {loc.data.sponsorizzato && (
+      <p style="background:var(--warn-bg);border-left:3px solid var(--accent);padding:0.6rem 1rem;font-size:0.9rem;border-radius:4px">
+        Contenuto sponsorizzato / in collaborazione (come dichiarato nel post originale)
+      </p>
+    )}
+
+    {loc.data.piatti_drink_citati.length > 0 && (
+      <section>
+        <h3>Citati nei post</h3>
+        <ul>
+          {loc.data.piatti_drink_citati.map((p) => <li>{p}</li>)}
+        </ul>
+      </section>
+    )}
+
     <section>
-      <h3>Citati nei post</h3>
-      <ul>
-        {loc.data.piatti_drink_citati.map((p) => <li>{p}</li>)}
-      </ul>
+      <h3>Visite</h3>
+      {visiteOrdinate.map((v) => (
+        <article style="border-top:1px solid var(--cream-border);padding:1rem 0">
+          <p class="muted" style="font-size:0.9rem;margin:0 0 0.5rem">
+            {v.data}
+            {v.fonte_tipo === "lista" && <span style="margin-left:0.5rem;background:var(--accent-soft);color:var(--ink);font-size:0.7rem;padding:0.1rem 0.45rem;border-radius:4px">da post-lista</span>}
+            {" · "}<a href={v.post_url} rel="noopener" style="color:var(--accent)">post originale ↗</a>
+          </p>
+          {v.foto.length > 0 && (
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
+              {v.foto.map((f) => <img src={f} alt="" style="max-width:240px;border-radius:6px" />)}
+            </div>
+          )}
+          <p style="white-space:pre-line">{v.caption}</p>
+        </article>
+      ))}
     </section>
-  )}
 
-  <section>
-    <h3>Visite</h3>
-    {visiteOrdinate.map((v) => (
-      <article style="border-top:1px solid var(--border);padding:1rem 0">
-        <p style="color:var(--muted);font-size:0.9rem;margin:0 0 0.5rem">
-          {v.data} · <a href={v.post_url} rel="noopener">post originale ↗</a>
-        </p>
-        {v.foto.length > 0 && (
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
-            {v.foto.map((f) => <img src={f} alt="" style="max-width:240px;border-radius:6px" />)}
-          </div>
-        )}
-        <p style="white-space:pre-line">{v.caption}</p>
-      </article>
-    ))}
-  </section>
-
-  <section style="margin-top:2rem">
-    <Content />
-  </section>
+    <section style="margin-top:2rem">
+      <Content />
+    </section>
+  </article>
 </Layout>
+
+<style>
+  .scheda { padding: 1.75rem; }
+  .scheda h3 { margin-top: 1.5rem; }
+  @media (max-width: 640px) {
+    .scheda { padding: 1.25rem; }
+  }
+</style>

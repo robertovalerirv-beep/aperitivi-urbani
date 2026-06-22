@@ -14,38 +14,96 @@ const { title, description } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap"
+    />
     <style is:global>
       :root {
-        --fg: #1a1a1a;
-        --bg: #fafaf7;
-        --accent: #b8341f;
-        --muted: #6b6b6b;
-        --border: #e5e5e0;
+        --teal: #3a8fa0;
+        --teal-dark: #1f5564;
+        --cream: #fbf5ec;
+        --cream-border: #e8dcc8;
+        --ink: #1b3942;
+        --muted: #6b7280;
+        --accent: #d9622e;
+        --accent-soft: #f2c57c;
+        --white: #ffffff;
+        --warn-bg: #fff3cd;
       }
       * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
       body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-        color: var(--fg);
-        background: var(--bg);
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        color: var(--white);
+        background: var(--teal);
         line-height: 1.6;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
       }
-      a { color: var(--accent); text-decoration: none; }
+      h1, h2, h3, h4 {
+        font-family: "Fraunces", Georgia, serif;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+      }
+      a { color: var(--accent-soft); text-decoration: none; }
       a:hover { text-decoration: underline; }
+
       header.site {
-        border-bottom: 1px solid var(--border);
+        background: var(--teal-dark);
         padding: 1.5rem 2rem;
       }
-      header.site h1 { margin: 0; font-size: 1.4rem; letter-spacing: -0.01em; }
-      header.site p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.95rem; }
-      main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+      header.site h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+      header.site h1 a {
+        color: var(--white);
+      }
+      header.site p {
+        margin: 0.25rem 0 0;
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.95rem;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
       footer.site {
-        border-top: 1px solid var(--border);
+        background: var(--teal-dark);
         padding: 2rem;
         text-align: center;
-        color: var(--muted);
+        color: rgba(255, 255, 255, 0.7);
         font-size: 0.85rem;
         margin-top: 4rem;
+      }
+      footer.site a { color: var(--accent-soft); }
+
+      /* Card su crema */
+      .card {
+        background: var(--cream);
+        color: var(--ink);
+        border: 1px solid var(--cream-border);
+        border-radius: 10px;
+        padding: 1.25rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      }
+      .card a { color: var(--ink); }
+      .card .muted { color: var(--muted); }
+      .stars { color: var(--accent); font-weight: 600; }
+
+      @media (max-width: 640px) {
+        main { padding: 1.25rem; }
+        header.site { padding: 1.25rem; }
+        header.site h1 { font-size: 1.3rem; }
       }
     </style>
   </head>

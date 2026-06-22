@@ -9,33 +9,273 @@ locali.sort((a, b) => {
   const db = b.data.visite[b.data.visite.length - 1].data;
   return db.localeCompare(da);
 });
+
+const zone = [...new Set(locali.map((l) => l.data.zona).filter(Boolean))].sort();
+const tipiDisponibili = [...new Set(locali.flatMap((l) => l.data.tipo))].sort();
+const fasceDisponibili = [...new Set(locali.map((l) => l.data.fascia_prezzo).filter(Boolean))].sort();
+const hasSponsor = locali.some((l) => l.data.sponsorizzato);
 ---
 
 <Layout title="Aperitivi Urbani — Locali recensiti a Milano" description="Le recensioni di locali milanesi di @aperitivi_urbani">
   <h2 style="margin-top:0">Tutti i locali</h2>
-  <p style="color:var(--muted)">{locali.length} {locali.length === 1 ? "locale" : "locali"} recensiti</p>
+  <p class="count-label" style="color:rgba(255,255,255,0.8)">
+    <span id="count">{locali.length}</span> {locali.length === 1 ? "locale" : "locali"}
+  </p>
 
-  <ul style="list-style:none;padding:0;display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+  <section class="filters" aria-label="Filtri">
+    <div class="filter-group">
+      <label for="f-zona">Zona</label>
+      <select id="f-zona">
+        <option value="">tutte</option>
+        {zone.map((z) => <option value={z}>{z}</option>)}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">Tipo</span>
+      <div class="chip-group" role="group">
+        {tipiDisponibili.map((t) => (
+          <label class="chip">
+            <input type="checkbox" class="f-tipo" value={t} />
+            <span>{t}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+
+    {fasceDisponibili.length > 0 && (
+      <div class="filter-group">
+        <span class="filter-label">Fascia prezzo</span>
+        <div class="chip-group" role="group">
+          <label class="chip"><input type="radio" name="f-fascia" value="" checked /><span>qualsiasi</span></label>
+          {fasceDisponibili.map((f) => (
+            <label class="chip"><input type="radio" name="f-fascia" value={f} /><span>{f}</span></label>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {hasSponsor && (
+      <div class="filter-group">
+        <label class="toggle">
+          <input type="checkbox" id="f-sponsor" checked />
+          <span>Mostra anche sponsorizzati</span>
+        </label>
+      </div>
+    )}
+
+    <button id="reset-filters" type="button" class="reset">azzera filtri</button>
+  </section>
+
+  <ul id="locali-list" style="list-style:none;padding:0;margin:1.5rem 0 0;display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
     {locali.map((loc) => {
       const ultima = loc.data.visite[loc.data.visite.length - 1];
       return (
-        <li style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;background:white">
-          <a href={`/locali/${loc.data.slug}/`} style="font-size:1.15rem;font-weight:600;color:var(--fg)">
+        <li
+          class="card locale-card"
+          data-zona={loc.data.zona ?? ""}
+          data-tipi={loc.data.tipo.join(",")}
+          data-fascia={loc.data.fascia_prezzo ?? ""}
+          data-sponsor={loc.data.sponsorizzato ? "1" : "0"}
+        >
+          <a href={`/locali/${loc.data.slug}/`} style="font-size:1.15rem;font-weight:600;font-family:'Fraunces',serif">
             {loc.data.nome}
           </a>
-          <div style="color:var(--muted);font-size:0.9rem;margin-top:0.25rem">
+          <div class="muted" style="font-size:0.9rem;margin-top:0.25rem">
             {loc.data.zona ?? "Milano"} · {loc.data.tipo.join(", ")}
           </div>
           {loc.data.voto_dedotto != null && (
-            <div style="margin-top:0.5rem;color:var(--accent);font-weight:600">
+            <div class="stars" style="margin-top:0.5rem">
               {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
             </div>
           )}
-          <div style="font-size:0.85rem;color:var(--muted);margin-top:0.5rem">
+          <div class="muted" style="font-size:0.85rem;margin-top:0.5rem">
             ultima visita: {ultima.data}
           </div>
+          {loc.data.sponsorizzato && (
+            <div style="margin-top:0.5rem;display:inline-block;background:var(--warn-bg);color:var(--ink);font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:4px">sponsorizzato</div>
+          )}
         </li>
       );
     })}
   </ul>
+
+  <p id="empty-state" style="display:none;text-align:center;padding:2rem;color:rgba(255,255,255,0.85)">
+    Nessun locale corrisponde ai filtri selezionati.
+  </p>
 </Layout>
+
+<style>
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-items: flex-end;
+    background: rgba(255, 255, 255, 0.07);
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .filter-group label,
+  .filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .filters select {
+    background: var(--cream);
+    color: var(--ink);
+    border: 1px solid var(--cream-border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+    min-width: 140px;
+  }
+  .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip span {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    background: var(--cream);
+    color: var(--ink);
+    border: 1px solid var(--cream-border);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+  .chip input:checked + span {
+    background: var(--accent);
+    color: var(--white);
+    border-color: var(--accent);
+  }
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.9rem;
+  }
+  .reset {
+    background: transparent;
+    color: var(--accent-soft);
+    border: 1px solid var(--accent-soft);
+    border-radius: 6px;
+    padding: 0.5rem 0.9rem;
+    font: inherit;
+    cursor: pointer;
+    align-self: flex-end;
+  }
+  .reset:hover { background: var(--accent-soft); color: var(--teal-dark); }
+
+  @media (max-width: 640px) {
+    .filters { gap: 0.9rem; padding: 0.9rem; }
+    .filters select { width: 100%; }
+    .reset { width: 100%; margin-top: 0.5rem; }
+  }
+</style>
+
+<script>
+  const list = document.getElementById("locali-list")!;
+  const cards = Array.from(list.querySelectorAll<HTMLElement>(".locale-card"));
+  const countEl = document.getElementById("count")!;
+  const emptyEl = document.getElementById("empty-state")!;
+  const fZona = document.getElementById("f-zona") as HTMLSelectElement;
+  const fTipo = Array.from(document.querySelectorAll<HTMLInputElement>(".f-tipo"));
+  const fFascia = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="f-fascia"]'));
+  const fSponsor = document.getElementById("f-sponsor") as HTMLInputElement | null;
+  const resetBtn = document.getElementById("reset-filters")!;
+
+  function readState() {
+    return {
+      zona: fZona.value,
+      tipi: fTipo.filter((c) => c.checked).map((c) => c.value),
+      fascia: (fFascia.find((r) => r.checked) || { value: "" }).value,
+      sponsor: fSponsor ? fSponsor.checked : true,
+    };
+  }
+
+  function writeUrl(state: ReturnType<typeof readState>) {
+    const p = new URLSearchParams();
+    if (state.zona) p.set("zona", state.zona);
+    if (state.tipi.length) p.set("tipi", state.tipi.join(","));
+    if (state.fascia) p.set("fascia", state.fascia);
+    if (!state.sponsor) p.set("sponsor", "0");
+    const qs = p.toString();
+    history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }
+
+  function loadFromUrl() {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("zona")) fZona.value = p.get("zona")!;
+    const tipiParam = p.get("tipi");
+    if (tipiParam) {
+      const set = new Set(tipiParam.split(","));
+      fTipo.forEach((c) => (c.checked = set.has(c.value)));
+    }
+    const fasciaParam = p.get("fascia");
+    if (fasciaParam) {
+      fFascia.forEach((r) => (r.checked = r.value === fasciaParam));
+    }
+    if (fSponsor && p.get("sponsor") === "0") fSponsor.checked = false;
+  }
+
+  function apply() {
+    const s = readState();
+    let visible = 0;
+    for (const card of cards) {
+      const zona = card.dataset.zona || "";
+      const tipi = (card.dataset.tipi || "").split(",");
+      const fascia = card.dataset.fascia || "";
+      const sponsor = card.dataset.sponsor === "1";
+
+      const ok =
+        (!s.zona || s.zona === zona) &&
+        (s.tipi.length === 0 || s.tipi.every((t) => tipi.includes(t))) &&
+        (!s.fascia || s.fascia === fascia) &&
+        (s.sponsor || !sponsor);
+
+      card.style.display = ok ? "" : "none";
+      if (ok) visible++;
+    }
+    countEl.textContent = String(visible);
+    emptyEl.style.display = visible === 0 ? "" : "none";
+    writeUrl(s);
+  }
+
+  [fZona, ...fTipo, ...fFascia, ...(fSponsor ? [fSponsor] : [])].forEach((el) =>
+    el.addEventListener("change", apply)
+  );
+
+  resetBtn.addEventListener("click", () => {
+    fZona.value = "";
+    fTipo.forEach((c) => (c.checked = false));
+    fFascia.forEach((r) => (r.checked = r.value === ""));
+    if (fSponsor) fSponsor.checked = true;
+    apply();
+  });
+
+  loadFromUrl();
+  apply();
+</script>

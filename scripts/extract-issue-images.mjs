@@ -50,10 +50,12 @@ if (!apiRes.ok) {
 const issue = await apiRes.json();
 const body = issue.body ?? "";
 
-// Match sia il vecchio formato user-images.githubusercontent.com sia il
-// nuovo github.com/user-attachments/assets/<uuid>.
+// Match:
+// - vecchio formato user-images.githubusercontent.com
+// - nuovo github.com/user-attachments/assets/<uuid>
+// - raw.githubusercontent.com (immagini caricate dall'intake su branch intake-staging)
 const urlRegex =
-  /https:\/\/(?:user-images\.githubusercontent\.com\/[^\s)]+|github\.com\/user-attachments\/assets\/[a-f0-9-]+)/gi;
+  /https:\/\/(?:user-images\.githubusercontent\.com\/[^\s)]+|github\.com\/user-attachments\/assets\/[a-f0-9-]+|raw\.githubusercontent\.com\/[^\s)]+)/gi;
 
 const urls = [...new Set(body.match(urlRegex) ?? [])];
 

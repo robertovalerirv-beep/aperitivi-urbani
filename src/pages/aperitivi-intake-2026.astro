@@ -1,0 +1,277 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Intake — Aperitivi Urbani" description="Inserimento post Instagram">
+  <section id="gate" class="gate-card">
+    <h2 style="margin-top:0">Accesso intake</h2>
+    <p class="muted-on-card">Inserisci la password per accedere al form.</p>
+    <label for="gate-pwd">Password</label>
+    <input id="gate-pwd" type="password" autocomplete="off" />
+    <button id="gate-btn" type="button" class="btn-primary">Entra</button>
+    <p id="gate-err" class="error" style="display:none"></p>
+  </section>
+
+  <section id="form-wrap" class="form-card" style="display:none">
+    <h2 style="margin-top:0">Nuovo post da Instagram</h2>
+    <p class="muted-on-card" style="margin-bottom:1.5rem">
+      Compila i campi. Le immagini vengono caricate sul branch <code>intake-staging</code> e referenziate nell'issue generata.
+    </p>
+
+    <form id="intake-form" novalidate>
+      <div class="field">
+        <label for="post_url">URL del post Instagram <span class="req">*</span></label>
+        <input id="post_url" name="post_url" type="url" placeholder="https://www.instagram.com/p/..." required />
+      </div>
+
+      <div class="field">
+        <label for="data">Data del post <span class="req">*</span></label>
+        <input id="data" name="data" type="date" required />
+      </div>
+
+      <div class="field">
+        <label for="caption">Caption integrale <span class="req">*</span></label>
+        <p class="hint">Incolla il testo, non uno screenshot.</p>
+        <textarea id="caption" name="caption" rows="10" required></textarea>
+      </div>
+
+      <div class="field">
+        <label for="nome_locale_hint">Nome del locale (opzionale)</label>
+        <input id="nome_locale_hint" name="nome_locale_hint" type="text" />
+      </div>
+
+      <div class="field">
+        <label for="foto">Foto (opzionale)</label>
+        <p class="hint">Da rullino o fotocamera. Più foto selezionabili.</p>
+        <input id="foto" name="foto" type="file" accept="image/*" multiple capture="environment" />
+        <p id="foto-info" class="hint"></p>
+      </div>
+
+      <div class="field">
+        <label for="note">Note per il revisore (opzionale)</label>
+        <textarea id="note" name="note" rows="3"></textarea>
+      </div>
+
+      <button id="submit-btn" type="submit" class="btn-primary submit">Crea issue</button>
+      <p id="submit-err" class="error" style="display:none"></p>
+      <p id="submit-ok" class="ok" style="display:none"></p>
+    </form>
+  </section>
+</Layout>
+
+<style>
+  .gate-card, .form-card {
+    background: var(--cream);
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 1.5rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .gate-card label, .form-card label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    font-size: 0.95rem;
+  }
+  .req { color: var(--accent); }
+  .hint { font-size: 0.85rem; color: var(--muted); margin: 0 0 0.5rem; }
+  .muted-on-card { color: var(--muted); }
+  .field { margin-bottom: 1.25rem; }
+  input[type="url"],
+  input[type="text"],
+  input[type="password"],
+  input[type="date"],
+  input[type="file"],
+  textarea {
+    width: 100%;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--cream-border);
+    border-radius: 6px;
+    background: #fff;
+    font: inherit;
+    color: var(--ink);
+    min-height: 48px;
+  }
+  textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    padding: 0.85rem 1.25rem;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .btn-primary:hover { background: #b9521f; }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .submit {
+    width: 100%;
+    font-size: 1.05rem;
+    margin-top: 0.5rem;
+  }
+  .error {
+    background: #fdecea;
+    color: #8a2018;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .ok {
+    background: #e6f4ea;
+    color: #1e6432;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+  }
+  .ok a { color: #1e6432; font-weight: 600; text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    .gate-card, .form-card { padding: 1.25rem; }
+  }
+</style>
+
+<script>
+  const STORAGE_KEY = "intake_pwd_v1";
+  const gate = document.getElementById("gate")!;
+  const formWrap = document.getElementById("form-wrap")!;
+  const gatePwd = document.getElementById("gate-pwd") as HTMLInputElement;
+  const gateBtn = document.getElementById("gate-btn") as HTMLButtonElement;
+  const gateErr = document.getElementById("gate-err") as HTMLElement;
+  const form = document.getElementById("intake-form") as HTMLFormElement;
+  const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement;
+  const submitErr = document.getElementById("submit-err") as HTMLElement;
+  const submitOk = document.getElementById("submit-ok") as HTMLElement;
+  const fotoInput = document.getElementById("foto") as HTMLInputElement;
+  const fotoInfo = document.getElementById("foto-info") as HTMLElement;
+
+  function showForm() {
+    gate.style.display = "none";
+    formWrap.style.display = "";
+  }
+
+  const stored = sessionStorage.getItem(STORAGE_KEY);
+  if (stored) showForm();
+
+  gateBtn.addEventListener("click", async () => {
+    gateErr.style.display = "none";
+    const pwd = gatePwd.value.trim();
+    if (!pwd) {
+      gateErr.textContent = "Inserisci la password.";
+      gateErr.style.display = "";
+      return;
+    }
+    gateBtn.disabled = true;
+    try {
+      const res = await fetch("/.netlify/functions/verify-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: pwd }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status}: ${txt}`);
+      }
+      sessionStorage.setItem(STORAGE_KEY, pwd);
+      showForm();
+    } catch (e) {
+      gateErr.textContent = (e as Error).message;
+      gateErr.style.display = "";
+    } finally {
+      gateBtn.disabled = false;
+    }
+  });
+
+  fotoInput.addEventListener("change", () => {
+    const n = fotoInput.files?.length ?? 0;
+    fotoInfo.textContent = n > 0 ? `${n} file selezionati` : "";
+  });
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const result = r.result as string;
+        const idx = result.indexOf(",");
+        resolve(result.slice(idx + 1));
+      };
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    submitErr.style.display = "none";
+    submitOk.style.display = "none";
+
+    const pwd = sessionStorage.getItem(STORAGE_KEY);
+    if (!pwd) {
+      gate.style.display = "";
+      formWrap.style.display = "none";
+      return;
+    }
+
+    const fd = new FormData(form);
+    const files = Array.from(fotoInput.files ?? []);
+
+    let images: { filename: string; content_b64: string }[] = [];
+    try {
+      images = await Promise.all(
+        files.map(async (f, i) => {
+          const ext = (f.name.split(".").pop() || "jpg").toLowerCase();
+          return {
+            filename: `foto-${String(i + 1).padStart(2, "0")}.${ext}`,
+            content_b64: await fileToBase64(f),
+          };
+        })
+      );
+    } catch (e) {
+      submitErr.textContent = `Errore lettura file: ${(e as Error).message}`;
+      submitErr.style.display = "";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Invio in corso…";
+    try {
+      const res = await fetch("/.netlify/functions/create-issue", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          password: pwd,
+          post_url: fd.get("post_url"),
+          data: fd.get("data"),
+          caption: fd.get("caption"),
+          nome_locale_hint: fd.get("nome_locale_hint") || null,
+          note: fd.get("note") || null,
+          images,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.error || `HTTP ${res.status}`);
+      }
+      submitOk.innerHTML = `Issue creata: <a href="${json.issue_url}" target="_blank" rel="noopener">${json.issue_url}</a>`;
+      submitOk.style.display = "";
+      form.reset();
+      fotoInfo.textContent = "";
+    } catch (e) {
+      submitErr.textContent = (e as Error).message;
+      submitErr.style.display = "";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Crea issue";
+    }
+  });
+</script>
