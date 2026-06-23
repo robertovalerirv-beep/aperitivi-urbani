@@ -52,6 +52,11 @@ import Layout from "../layouts/Layout.astro";
         <textarea id="note" name="note" rows="3"></textarea>
       </div>
 
+      <div>
+        <label for="note_audio">Note audio / trascrizione reel <span style="font-weight:400;font-size:0.85rem;opacity:0.7">(opzionale — solo per reel)</span></label>
+        <textarea id="note_audio" name="note_audio" rows="3" placeholder="Es: nel reel parla di atmosfera informale, consiglia il negroni sbagliato, dice che il locale è in Navigli vicino al ponte..."></textarea>
+      </div>
+
       <button id="submit-btn" type="submit" class="btn-primary submit">Crea issue</button>
       <p id="submit-err" class="error" style="display:none"></p>
       <p id="submit-ok" class="ok" style="display:none"></p>
@@ -255,6 +260,7 @@ import Layout from "../layouts/Layout.astro";
           caption: fd.get("caption"),
           nome_locale_hint: fd.get("nome_locale_hint") || null,
           note: fd.get("note") || null,
+          note_audio: fd.get("note_audio") || null,
           images,
         }),
       });

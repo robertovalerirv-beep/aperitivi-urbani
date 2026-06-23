@@ -64,6 +64,11 @@ jobs:
             3bis. `indirizzo`: cerca l'indirizzo fisico reale del locale usando
                nome e città. Formato: "Via Roma 12". Solo via e numero civico,
                senza CAP né città. null se non sei sicuro.
+            3ter. Se nel body della issue è presente la sezione "Note audio
+               (trascrizione reel):", usa quel testo come fonte aggiuntiva per
+               estrarre informazioni sul locale (piatti, drink, atmosfera, zona).
+               Fondilo con la caption scritta. Non inventare nulla che non sia
+               presente in caption o note audio.
             4. CLASSIFICA il post in due categorie prima di estrarre:
                - "singola": post dedicato a UN locale (testo descrittivo, opinioni,
                  piatti/drink citati, tono riconoscibile).
