@@ -121,6 +121,131 @@ jobs:
             Lo schema è in schemas/locale-schema.json — leggilo prima di
             scrivere qualsiasi cosa.
 
+      - name: Enrich con Google Places API
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          if ! git status --porcelain content/locali/ | grep -q '\.md$'; then
+            echo "Nessun file MD modificato, skip enrichment."
+            exit 0
+          fi
+          if [ -z "$GOOGLE_MAPS_API_KEY" ]; then
+            echo "GOOGLE_MAPS_API_KEY non configurata, skip enrichment."
+            exit 0
+          fi
+          cat > /tmp/enrich-places.mjs <<'NODE_SCRIPT'
+          import { readFile, writeFile, readdir } from "node:fs/promises";
+          import path from "node:path";
+          import { load as parseYaml, dump as dumpYaml } from "js-yaml";
+
+          const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+          const CONTENT_DIR = "content/locali";
+          const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
+
+          const TYPE_MAP = (types = []) => {
+            const t = new Set(types);
+            if (t.has("cocktail_bar") || t.has("night_club") || t.has("bar")) return "cocktail-bar";
+            if (t.has("restaurant")) return "ristorante";
+            if (t.has("cafe") || t.has("bakery")) return "caffetteria";
+            return null;
+          };
+
+          function parseFm(src) {
+            const m = src.match(FM_RE);
+            if (!m) return null;
+            return { data: parseYaml(m[1]), body: m[2] ?? "" };
+          }
+          function serializeFm(data, body) {
+            const fm = dumpYaml(data, { lineWidth: -1, noRefs: true });
+            return `---\n${fm}---\n${body}`;
+          }
+          function needsEnrichment(d) {
+            const zonaGeneric = !d.zona || d.zona === "Milano";
+            const tipoGeneric = Array.isArray(d.tipo) && d.tipo.length === 1 && d.tipo[0] === "altro";
+            const indirizzoMissing = !d.indirizzo;
+            return zonaGeneric || tipoGeneric || indirizzoMissing;
+          }
+          function extractIndirizzo(formatted) {
+            if (!formatted) return null;
+            const first = formatted.split(",")[0]?.trim();
+            return first || null;
+          }
+          function extractZona(components) {
+            if (!Array.isArray(components)) return null;
+            const pick = (t) => components.find((c) => c.types?.includes(t))?.long_name;
+            return pick("sublocality_level_1") || pick("sublocality") || pick("neighborhood") || null;
+          }
+
+          async function textSearch(name) {
+            const q = encodeURIComponent(`${name} Milano`);
+            const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${API_KEY}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`textsearch HTTP ${res.status}`);
+            const j = await res.json();
+            if (j.status && j.status !== "OK" && j.status !== "ZERO_RESULTS") {
+              throw new Error(`textsearch status=${j.status} ${j.error_message ?? ""}`);
+            }
+            return j.results?.[0] ?? null;
+          }
+          async function placeDetails(placeId) {
+            const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=address_components,formatted_address,types&key=${API_KEY}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`details HTTP ${res.status}`);
+            const j = await res.json();
+            if (j.status && j.status !== "OK") {
+              throw new Error(`details status=${j.status} ${j.error_message ?? ""}`);
+            }
+            return j.result ?? null;
+          }
+
+          let files = [];
+          try { files = (await readdir(CONTENT_DIR)).filter((f) => f.endsWith(".md")); }
+          catch { console.log("content/locali non esiste, skip."); process.exit(0); }
+
+          let enriched = 0, missed = 0, skipped = 0, errors = 0;
+          for (const file of files) {
+            const full = path.join(CONTENT_DIR, file);
+            const src = await readFile(full, "utf8");
+            const parsed = parseFm(src);
+            if (!parsed) { console.log(`skip ${file}: no frontmatter`); skipped++; continue; }
+            const d = parsed.data;
+            if (!needsEnrichment(d)) { console.log(`skip ${file}: già arricchito`); skipped++; continue; }
+            if (!d.nome) { console.log(`skip ${file}: senza nome`); skipped++; continue; }
+            try {
+              const r = await textSearch(d.nome);
+              if (!r?.place_id) { console.log(`miss ${file}: nessun risultato Places per "${d.nome}"`); missed++; continue; }
+              const details = await placeDetails(r.place_id);
+              if (!details) { missed++; continue; }
+              let changed = false;
+              if (!d.indirizzo) {
+                const ind = extractIndirizzo(details.formatted_address);
+                if (ind) { d.indirizzo = ind; changed = true; }
+              }
+              if (!d.zona || d.zona === "Milano") {
+                const z = extractZona(details.address_components);
+                if (z) { d.zona = z; changed = true; }
+              }
+              if (Array.isArray(d.tipo) && d.tipo.length === 1 && d.tipo[0] === "altro") {
+                const mapped = TYPE_MAP(details.types);
+                if (mapped) { d.tipo = [mapped]; changed = true; }
+              }
+              if (changed) {
+                await writeFile(full, serializeFm(d, parsed.body), "utf8");
+                console.log(`✓ enriched ${file}: indirizzo="${d.indirizzo ?? ""}" zona="${d.zona ?? ""}" tipo=${JSON.stringify(d.tipo)}`);
+                enriched++;
+              } else {
+                console.log(`no-op ${file}: Places non ha aggiunto info utili`);
+                missed++;
+              }
+            } catch (e) {
+              console.log(`error ${file}: ${e.message}`);
+              errors++;
+            }
+          }
+          console.log(`\nEnrichment summary: ${enriched} arricchiti, ${missed} miss, ${skipped} skip, ${errors} errori.`);
+          NODE_SCRIPT
+          node /tmp/enrich-places.mjs
+
       - name: Valida i file modificati contro lo schema
         run: node scripts/validate-locali.mjs
 
