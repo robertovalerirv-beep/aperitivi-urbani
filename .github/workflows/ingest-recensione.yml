@@ -123,14 +123,14 @@ jobs:
 
       - name: Enrich con Google Places API
         env:
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
         run: |
           if ! git status --porcelain content/locali/ | grep -q '\.md$'; then
             echo "Nessun file MD modificato, skip enrichment."
             exit 0
           fi
-          if [ -z "$GOOGLE_MAPS_API_KEY" ]; then
-            echo "GOOGLE_MAPS_API_KEY non configurata, skip enrichment."
+          if [ -z "$GOOGLE_PLACES_API_KEY" ]; then
+            echo "GOOGLE_PLACES_API_KEY non configurata, skip enrichment."
             exit 0
           fi
           cat > /tmp/enrich-places.mjs <<'NODE_SCRIPT'
@@ -142,7 +142,7 @@ jobs:
           import { readFile, writeFile, readdir } from "node:fs/promises";
           import path from "node:path";
 
-          const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+          const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
           const CONTENT_DIR = "content/locali";
           const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 
