@@ -5,7 +5,7 @@ zona: null
 indirizzo: "Via Caldera 1, Milano"
 citta: Milano
 tipo:
-  - altro
+  - ristorante
 fascia_prezzo: null
 piatti_drink_citati: []
 sentiment: null

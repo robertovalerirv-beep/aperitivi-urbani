@@ -2,7 +2,7 @@
 slug: tranvaibar
 nome: Tranvaibar
 zona: Martesana
-indirizzo: null
+indirizzo: Via Gianfranco Zuretti
 citta: Milano
 tipo:
   - aperitivo

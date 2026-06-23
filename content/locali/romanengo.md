@@ -5,7 +5,7 @@ zona: null
 indirizzo: "Via Manzoni 5, Milano"
 citta: Milano
 tipo:
-  - altro
+  - caffetteria
 fascia_prezzo: null
 piatti_drink_citati: []
 sentiment: null

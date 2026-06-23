@@ -5,7 +5,7 @@ zona: null
 indirizzo: "Via Marco Aurelio 8, Milano"
 citta: Milano
 tipo:
-  - altro
+  - cocktail-bar
 fascia_prezzo: null
 piatti_drink_citati: []
 sentiment: null

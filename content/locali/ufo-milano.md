@@ -2,7 +2,7 @@
 slug: ufo-milano
 nome: Ufo Milano
 zona: Scalo Romana
-indirizzo: null
+indirizzo: Via Orobia
 citta: Milano
 tipo:
   - aperitivo
