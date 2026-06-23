@@ -5,7 +5,7 @@ zona: null
 indirizzo: "Via Porpora 18, Milano"
 citta: Milano
 tipo:
-  - altro
+  - caffetteria
 fascia_prezzo: null
 piatti_drink_citati: []
 sentiment: null

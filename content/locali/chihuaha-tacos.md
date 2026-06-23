@@ -5,7 +5,7 @@ zona: null
 indirizzo: "Piazza 24 maggio 7, Milano"
 citta: Milano
 tipo:
-  - altro
+  - cocktail-bar
 fascia_prezzo: null
 piatti_drink_citati: []
 sentiment: null
