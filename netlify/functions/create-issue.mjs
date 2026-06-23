@@ -64,7 +64,7 @@ async function uploadImage(token, owner, repo, path, contentB64) {
   });
 }
 
-function buildIssueBody({ post_url, data, caption, nome_locale_hint, indirizzo, note, note_audio, imageUrls }) {
+function buildIssueBody({ post_url, data, caption, nome_locale_hint, indirizzo, note, note_audio, locali_lista, imageUrls }) {
   // Riproduce il formato del Form ISSUE_TEMPLATE in modo leggibile dal workflow:
   // headings ### <Label del campo> seguiti dal valore.
   const lines = [];
@@ -95,6 +95,22 @@ function buildIssueBody({ post_url, data, caption, nome_locale_hint, indirizzo, 
   }
   if (note_audio && String(note_audio).trim()) {
     lines.push("**Note audio (trascrizione reel):**", "", String(note_audio).trim(), "");
+  }
+  if (Array.isArray(locali_lista) && locali_lista.length > 0) {
+    const validi = locali_lista
+      .map((l) => ({
+        nome: String(l?.nome ?? "").trim(),
+        indirizzo: String(l?.indirizzo ?? "").trim(),
+      }))
+      .filter((l) => l.nome.length > 0);
+    if (validi.length > 0) {
+      lines.push("**Locali citati:**", "");
+      for (const l of validi) {
+        const ind = l.indirizzo || "—";
+        lines.push(`- Nome: ${l.nome} | Indirizzo: ${ind}`);
+      }
+      lines.push("");
+    }
   }
   return lines.join("\n");
 }
@@ -127,7 +143,7 @@ export default async (req) => {
     return jsonResponse(401, { error: "Password errata" });
   }
 
-  const { post_url, data, caption, nome_locale_hint, indirizzo, note, note_audio, images } = body;
+  const { post_url, data, caption, nome_locale_hint, indirizzo, note, note_audio, locali_lista, images } = body;
   if (!post_url || !data || !caption) {
     return jsonResponse(400, {
       error: "Campi obbligatori mancanti: post_url, data, caption.",
@@ -163,6 +179,7 @@ export default async (req) => {
       indirizzo,
       note,
       note_audio,
+      locali_lista,
       imageUrls,
     });
 

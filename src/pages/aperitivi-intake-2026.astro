@@ -57,6 +57,21 @@ import Layout from "../layouts/Layout.astro";
         <input type="text" id="indirizzo" name="indirizzo" placeholder="Via Roma 12" />
       </div>
 
+      <div class="lista-block">
+        <label class="toggle-lista">
+          <input type="checkbox" id="is_lista" name="is_lista" />
+          <span>Questo è un post-lista (più locali)</span>
+        </label>
+
+        <div id="lista-wrap" style="display:none">
+          <p class="hint" style="margin-top:0.75rem">
+            Aggiungi una riga per ogni locale citato nel post. Indirizzo opzionale ma consigliato.
+          </p>
+          <div id="lista-rows"></div>
+          <button type="button" id="add-locale" class="btn-secondary">+ Aggiungi locale</button>
+        </div>
+      </div>
+
       <div>
         <label for="note_audio">Note audio / trascrizione reel <span style="font-weight:400;font-size:0.85rem;opacity:0.7">(opzionale — solo per reel)</span></label>
         <textarea id="note_audio" name="note_audio" rows="3" placeholder="Es: nel reel parla di atmosfera informale, consiglia il negroni sbagliato, dice che il locale è in Navigli vicino al ponte..."></textarea>
@@ -146,8 +161,62 @@ import Layout from "../layouts/Layout.astro";
   }
   .ok a { color: #1e6432; font-weight: 600; text-decoration: underline; }
 
+  .lista-block {
+    background: rgba(58, 143, 160, 0.08);
+    border: 1px solid rgba(58, 143, 160, 0.25);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .toggle-lista {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 0.95rem;
+    margin-bottom: 0;
+  }
+  .toggle-lista input { width: auto; min-height: 0; }
+  .lista-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .lista-row input[type="text"] { min-height: 44px; }
+  .btn-remove {
+    background: transparent;
+    border: 1px solid #c2603a;
+    color: #c2603a;
+    border-radius: 6px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+  }
+  .btn-remove:hover { background: #c2603a; color: var(--white); }
+  .btn-secondary {
+    background: transparent;
+    border: 1px dashed #3a8fa0;
+    color: #3a8fa0;
+    border-radius: 6px;
+    padding: 0.55rem 0.9rem;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.25rem;
+  }
+  .btn-secondary:hover { background: #3a8fa0; color: var(--white); border-style: solid; }
+
   @media (max-width: 640px) {
     .gate-card, .form-card { padding: 1.25rem; }
+    .lista-row { grid-template-columns: 1fr; gap: 0.4rem; }
+    .lista-row .btn-remove { justify-self: end; width: 44px; }
   }
 </style>
 
@@ -206,6 +275,39 @@ import Layout from "../layouts/Layout.astro";
     const n = fotoInput.files?.length ?? 0;
     fotoInfo.textContent = n > 0 ? `${n} file selezionati` : "";
   });
+
+  const isLista = document.getElementById("is_lista") as HTMLInputElement;
+  const listaWrap = document.getElementById("lista-wrap") as HTMLElement;
+  const listaRows = document.getElementById("lista-rows") as HTMLElement;
+  const addLocaleBtn = document.getElementById("add-locale") as HTMLButtonElement;
+
+  function addListaRow(nome = "", indirizzo = "") {
+    const row = document.createElement("div");
+    row.className = "lista-row";
+    row.innerHTML = `
+      <input type="text" class="lista-nome" placeholder="Nome locale" value="${nome.replace(/"/g, "&quot;")}" />
+      <input type="text" class="lista-indirizzo" placeholder="Indirizzo (Via Roma 12)" value="${indirizzo.replace(/"/g, "&quot;")}" />
+      <button type="button" class="btn-remove" aria-label="Rimuovi">×</button>
+    `;
+    row.querySelector(".btn-remove")!.addEventListener("click", () => row.remove());
+    listaRows.appendChild(row);
+  }
+
+  isLista.addEventListener("change", () => {
+    listaWrap.style.display = isLista.checked ? "" : "none";
+    if (isLista.checked && listaRows.childElementCount === 0) addListaRow();
+  });
+  addLocaleBtn.addEventListener("click", () => addListaRow());
+
+  function collectLocaliLista(): { nome: string; indirizzo: string }[] {
+    if (!isLista.checked) return [];
+    return Array.from(listaRows.querySelectorAll<HTMLElement>(".lista-row"))
+      .map((row) => ({
+        nome: (row.querySelector(".lista-nome") as HTMLInputElement).value.trim(),
+        indirizzo: (row.querySelector(".lista-indirizzo") as HTMLInputElement).value.trim(),
+      }))
+      .filter((x) => x.nome.length > 0);
+  }
 
   function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -267,6 +369,7 @@ import Layout from "../layouts/Layout.astro";
           indirizzo: fd.get("indirizzo") || null,
           note: fd.get("note") || null,
           note_audio: fd.get("note_audio") || null,
+          locali_lista: collectLocaliLista(),
           images,
         }),
       });
