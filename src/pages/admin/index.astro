@@ -1,0 +1,158 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+
+const locali = await getCollection("locali");
+locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
+---
+
+<Layout title="Admin — Aperitivi Urbani" description="Pannello admin">
+  <section id="gate" class="card admin-card">
+    <h2 style="margin-top:0">Admin</h2>
+    <p class="muted">Inserisci la password admin per modificare i locali.</p>
+    <label for="gate-pwd">Password</label>
+    <input id="gate-pwd" type="password" autocomplete="off" />
+    <button id="gate-btn" type="button" class="btn-primary">Entra</button>
+    <p id="gate-err" class="error" style="display:none"></p>
+  </section>
+
+  <section id="lista" class="card admin-card" style="display:none">
+    <h2 style="margin-top:0">Modifica locali</h2>
+    <p class="muted">{locali.length} {locali.length === 1 ? "locale" : "locali"} in archivio. Clicca per modificare.</p>
+    <ul class="locale-list">
+      {locali.map((l) => (
+        <li>
+          <a href={`/admin/${l.data.slug}/`}>
+            <strong>{l.data.nome}</strong>
+            <span class="muted">
+              {l.data.zona ?? "Milano"} · {l.data.tipo.join(", ")}
+              {l.data.indirizzo && <> · {l.data.indirizzo}</>}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <p class="muted hint">
+      Le modifiche vengono commitate su <code>main</code>. Il sito si ricostruisce automaticamente in 1-2 minuti.
+    </p>
+  </section>
+</Layout>
+
+<style>
+  .admin-card {
+    background: var(--cream);
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 1.5rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .muted { color: var(--muted); }
+  label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+  input[type="password"] {
+    width: 100%;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--cream-border);
+    border-radius: 6px;
+    background: #fff;
+    font: inherit;
+    color: var(--ink);
+    min-height: 48px;
+    margin-bottom: 0.75rem;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    padding: 0.85rem 1.25rem;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .btn-primary:hover { background: #b9521f; }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .error {
+    background: #fdecea;
+    color: #8a2018;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  .locale-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .locale-list a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    background: rgba(58, 143, 160, 0.05);
+    border: 1px solid var(--cream-border);
+    border-radius: 6px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .locale-list a:hover {
+    background: rgba(58, 143, 160, 0.12);
+    border-color: var(--teal);
+  }
+  .locale-list .muted { font-size: 0.85rem; }
+  .hint { font-size: 0.85rem; margin-top: 1.5rem; }
+  code { background: rgba(0,0,0,0.05); padding: 0.1rem 0.35rem; border-radius: 3px; }
+</style>
+
+<script>
+  const STORAGE_KEY = "admin_pwd_v1";
+  const gate = document.getElementById("gate")!;
+  const lista = document.getElementById("lista")!;
+  const gatePwd = document.getElementById("gate-pwd") as HTMLInputElement;
+  const gateBtn = document.getElementById("gate-btn") as HTMLButtonElement;
+  const gateErr = document.getElementById("gate-err") as HTMLElement;
+
+  function showLista() {
+    gate.style.display = "none";
+    lista.style.display = "";
+  }
+
+  if (sessionStorage.getItem(STORAGE_KEY)) showLista();
+
+  async function verify(pwd: string) {
+    const res = await fetch("/.netlify/functions/update-locale", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password: pwd, ping: true }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+  }
+
+  gateBtn.addEventListener("click", async () => {
+    gateErr.style.display = "none";
+    const pwd = gatePwd.value.trim();
+    if (!pwd) { gateErr.textContent = "Inserisci la password."; gateErr.style.display = ""; return; }
+    gateBtn.disabled = true;
+    try {
+      await verify(pwd);
+      sessionStorage.setItem(STORAGE_KEY, pwd);
+      showLista();
+    } catch (e) {
+      gateErr.textContent = (e as Error).message;
+      gateErr.style.display = "";
+    } finally {
+      gateBtn.disabled = false;
+    }
+  });
+
+  gatePwd.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") gateBtn.click();
+  });
+</script>

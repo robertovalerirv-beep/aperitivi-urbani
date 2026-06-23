@@ -1,0 +1,312 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+
+export async function getStaticPaths() {
+  const locali = await getCollection("locali");
+  return locali.map((l) => ({ params: { slug: l.data.slug }, props: { loc: l } }));
+}
+
+const { loc } = Astro.props;
+const d = loc.data;
+
+const TIPI = ["aperitivo","ristorante","cocktail-bar","wine-bar","bistrot","trattoria","pizzeria","caffetteria","altro"];
+const FASCE = ["€","€€","€€€","€€€€"];
+const SENTIMENTS = ["entusiasta","positivo","neutro","tiepido","critico"];
+
+const initial = {
+  nome: d.nome,
+  zona: d.zona ?? "",
+  indirizzo: d.indirizzo ?? "",
+  citta: d.citta ?? "Milano",
+  tipo: d.tipo ?? [],
+  fascia_prezzo: d.fascia_prezzo ?? "",
+  sentiment: d.sentiment ?? "",
+  voto_dedotto: d.voto_dedotto ?? "",
+  sponsorizzato: !!d.sponsorizzato,
+  piatti_drink_citati: (d.piatti_drink_citati ?? []).join("\n"),
+};
+---
+
+<Layout title={`Modifica ${d.nome} — Admin`} description="Modifica locale">
+  <p><a href="/admin/" style="color:var(--accent-soft)">← lista locali</a></p>
+
+  <section id="gate" class="card admin-card" style="display:none">
+    <h2 style="margin-top:0">Admin</h2>
+    <p class="muted">Sessione scaduta. Reinserisci la password.</p>
+    <label for="gate-pwd">Password</label>
+    <input id="gate-pwd" type="password" autocomplete="off" />
+    <button id="gate-btn" type="button" class="btn-primary">Entra</button>
+    <p id="gate-err" class="error" style="display:none"></p>
+  </section>
+
+  <section id="form-wrap" class="card admin-card">
+    <h2 style="margin-top:0">{d.nome}</h2>
+    <p class="muted" style="margin-top:0;font-size:0.9rem">slug: <code>{d.slug}</code></p>
+
+    <form id="edit-form" novalidate>
+      <div class="field">
+        <label for="nome">Nome <span class="req">*</span></label>
+        <input id="nome" type="text" required />
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="zona">Zona</label>
+          <input id="zona" type="text" placeholder="Es. Loreto, NoLo, Navigli" />
+        </div>
+        <div class="field">
+          <label for="citta">Città</label>
+          <input id="citta" type="text" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="indirizzo">Indirizzo</label>
+        <input id="indirizzo" type="text" placeholder="Via Roma 12" />
+      </div>
+
+      <div class="field">
+        <span class="field-label">Tipo <span class="req">*</span></span>
+        <div class="chip-group">
+          {TIPI.map((t) => (
+            <label class="chip">
+              <input type="checkbox" class="f-tipo" value={t} />
+              <span>{t}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <span class="field-label">Fascia prezzo</span>
+          <div class="chip-group">
+            <label class="chip"><input type="radio" name="f-fascia" value="" /><span>—</span></label>
+            {FASCE.map((f) => (
+              <label class="chip"><input type="radio" name="f-fascia" value={f} /><span>{f}</span></label>
+            ))}
+          </div>
+        </div>
+        <div class="field">
+          <label for="sentiment">Sentiment</label>
+          <select id="sentiment">
+            <option value="">— nessuno —</option>
+            {SENTIMENTS.map((s) => <option value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="voto_dedotto">Voto dedotto (1-5)</label>
+          <input id="voto_dedotto" type="number" min="1" max="5" step="0.5" />
+        </div>
+        <div class="field">
+          <label class="toggle">
+            <input id="sponsorizzato" type="checkbox" />
+            <span>Sponsorizzato</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="piatti_drink_citati">Piatti / drink citati</label>
+        <p class="hint">Uno per riga.</p>
+        <textarea id="piatti_drink_citati" rows="4"></textarea>
+      </div>
+
+      <button id="submit-btn" type="submit" class="btn-primary submit">Salva modifiche</button>
+      <p id="submit-err" class="error" style="display:none"></p>
+      <p id="submit-ok" class="ok" style="display:none"></p>
+    </form>
+  </section>
+</Layout>
+
+<script id="initial-data" type="application/json" set:html={JSON.stringify(initial)}></script>
+<script define:vars={{ slug: d.slug }}>
+  // L'export ts in <script> di Astro viene bundlato; uso JS runtime classico.
+  const STORAGE_KEY = "admin_pwd_v1";
+  const initial = JSON.parse(document.getElementById("initial-data").textContent);
+
+  const gate = document.getElementById("gate");
+  const formWrap = document.getElementById("form-wrap");
+  const gatePwd = document.getElementById("gate-pwd");
+  const gateBtn = document.getElementById("gate-btn");
+  const gateErr = document.getElementById("gate-err");
+  const form = document.getElementById("edit-form");
+  const submitBtn = document.getElementById("submit-btn");
+  const submitErr = document.getElementById("submit-err");
+  const submitOk = document.getElementById("submit-ok");
+
+  function $(id) { return document.getElementById(id); }
+
+  // Prefill
+  $("nome").value = initial.nome ?? "";
+  $("zona").value = initial.zona ?? "";
+  $("indirizzo").value = initial.indirizzo ?? "";
+  $("citta").value = initial.citta ?? "Milano";
+  for (const cb of document.querySelectorAll(".f-tipo")) {
+    cb.checked = initial.tipo.includes(cb.value);
+  }
+  for (const r of document.querySelectorAll('input[name="f-fascia"]')) {
+    r.checked = r.value === (initial.fascia_prezzo ?? "");
+  }
+  $("sentiment").value = initial.sentiment ?? "";
+  $("voto_dedotto").value = initial.voto_dedotto === "" ? "" : String(initial.voto_dedotto);
+  $("sponsorizzato").checked = !!initial.sponsorizzato;
+  $("piatti_drink_citati").value = initial.piatti_drink_citati ?? "";
+
+  function showGate() { gate.style.display = ""; formWrap.style.display = "none"; }
+  function showForm() { gate.style.display = "none"; formWrap.style.display = ""; }
+  if (!sessionStorage.getItem(STORAGE_KEY)) showGate();
+
+  gateBtn.addEventListener("click", async () => {
+    gateErr.style.display = "none";
+    const pwd = gatePwd.value.trim();
+    if (!pwd) { gateErr.textContent = "Inserisci la password."; gateErr.style.display = ""; return; }
+    gateBtn.disabled = true;
+    try {
+      const res = await fetch("/.netlify/functions/update-locale", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: pwd, ping: true }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `HTTP ${res.status}`);
+      }
+      sessionStorage.setItem(STORAGE_KEY, pwd);
+      showForm();
+    } catch (e) {
+      gateErr.textContent = e.message;
+      gateErr.style.display = "";
+    } finally {
+      gateBtn.disabled = false;
+    }
+  });
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    submitErr.style.display = "none";
+    submitOk.style.display = "none";
+
+    const pwd = sessionStorage.getItem(STORAGE_KEY);
+    if (!pwd) { showGate(); return; }
+
+    const tipi = Array.from(document.querySelectorAll(".f-tipo"))
+      .filter((c) => c.checked).map((c) => c.value);
+    const fasciaSel = document.querySelector('input[name="f-fascia"]:checked');
+    const fields = {
+      nome: $("nome").value.trim(),
+      zona: $("zona").value.trim(),
+      indirizzo: $("indirizzo").value.trim(),
+      citta: $("citta").value.trim(),
+      tipo: tipi,
+      fascia_prezzo: fasciaSel ? fasciaSel.value : "",
+      sentiment: $("sentiment").value,
+      voto_dedotto: $("voto_dedotto").value,
+      sponsorizzato: $("sponsorizzato").checked,
+      piatti_drink_citati: $("piatti_drink_citati").value
+        .split("\n").map((s) => s.trim()).filter((s) => s.length > 0),
+    };
+
+    if (!fields.nome) { submitErr.textContent = "Il nome è obbligatorio."; submitErr.style.display = ""; return; }
+    if (tipi.length === 0) { submitErr.textContent = "Seleziona almeno un tipo."; submitErr.style.display = ""; return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Salvataggio…";
+    try {
+      const res = await fetch("/.netlify/functions/update-locale", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: pwd, slug, fields }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        sessionStorage.removeItem(STORAGE_KEY);
+        showGate();
+        return;
+      }
+      if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      let msg = "Modifica salvata. Il sito si ricostruirà su Netlify in 1-2 minuti.";
+      if (j.commit_url) {
+        msg += ` <a href="${j.commit_url}" target="_blank" rel="noopener">commit ↗</a>`;
+      }
+      submitOk.innerHTML = msg;
+      submitOk.style.display = "";
+    } catch (e) {
+      submitErr.textContent = e.message;
+      submitErr.style.display = "";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Salva modifiche";
+    }
+  });
+</script>
+
+<style>
+  .admin-card {
+    background: var(--cream);
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 1.5rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .muted { color: var(--muted); }
+  .req { color: var(--accent); }
+  .hint { font-size: 0.85rem; color: var(--muted); margin: 0 0 0.5rem; }
+  .field { margin-bottom: 1.25rem; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  label, .field-label {
+    display: block; font-weight: 600; margin-bottom: 0.4rem; font-size: 0.95rem;
+  }
+  input[type="text"], input[type="number"], input[type="password"], select, textarea {
+    width: 100%; padding: 0.7rem 0.85rem;
+    border: 1px solid var(--cream-border); border-radius: 6px;
+    background: #fff; font: inherit; color: var(--ink); min-height: 44px;
+  }
+  textarea { min-height: 100px; resize: vertical; font-family: "Inter", sans-serif; }
+  .chip-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip { display: inline-flex; align-items: center; cursor: pointer; user-select: none; }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip span {
+    display: inline-block; padding: 0.4rem 0.85rem;
+    background: #fff; color: var(--ink);
+    border: 1px solid var(--cream-border); border-radius: 999px;
+    font-size: 0.9rem;
+  }
+  .chip input:checked + span { background: var(--accent); color: var(--white); border-color: var(--accent); }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    cursor: pointer; font-weight: 600;
+  }
+  .toggle input { width: auto; min-height: 0; }
+  .btn-primary {
+    background: var(--accent); color: var(--white);
+    border: none; border-radius: 6px;
+    padding: 0.85rem 1.25rem; font: inherit; font-weight: 600;
+    cursor: pointer; min-height: 48px;
+  }
+  .btn-primary:hover { background: #b9521f; }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .submit { width: 100%; font-size: 1.05rem; margin-top: 0.5rem; }
+  .error {
+    background: #fdecea; color: #8a2018;
+    padding: 0.75rem 1rem; border-radius: 6px;
+    margin-top: 1rem; font-size: 0.9rem; white-space: pre-wrap; word-break: break-word;
+  }
+  .ok {
+    background: #e6f4ea; color: #1e6432;
+    padding: 0.75rem 1rem; border-radius: 6px;
+    margin-top: 1rem; font-size: 0.95rem;
+  }
+  .ok a { color: #1e6432; font-weight: 600; text-decoration: underline; }
+  code { background: rgba(0,0,0,0.06); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.9em; }
+
+  @media (max-width: 640px) {
+    .admin-card { padding: 1.25rem; }
+    .field-row { grid-template-columns: 1fr; gap: 0; }
+  }
+</style>
