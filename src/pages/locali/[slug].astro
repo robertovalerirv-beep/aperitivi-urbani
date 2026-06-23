@@ -82,7 +82,7 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
             loading="lazy"
             allowfullscreen
             referrerpolicy="no-referrer-when-downgrade"
-            src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyD-PLACEHOLDER&q=${encodeURIComponent((loc.data.indirizzo ?? "") + ", " + (loc.data.citta ?? "Milano"))}`}
+            src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent((loc.data.indirizzo ?? "") + ", " + (loc.data.citta ?? "Milano"))}`}
           ></iframe>
         </div>
       </section>
