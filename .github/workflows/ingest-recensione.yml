@@ -134,9 +134,13 @@ jobs:
             exit 0
           fi
           cat > /tmp/enrich-places.mjs <<'NODE_SCRIPT'
+          // Arricchimento Places API senza dipendenze esterne.
+          // Parsiamo solo i 4 campi top-level del frontmatter che ci interessano
+          // (nome, zona, indirizzo, tipo) con regex mirate, e riscriviamo solo
+          // quelli — il resto del file resta byte-per-byte invariato (diff
+          // minimi, niente noise da reserialization).
           import { readFile, writeFile, readdir } from "node:fs/promises";
           import path from "node:path";
-          import { load as parseYaml, dump as dumpYaml } from "js-yaml";
 
           const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
           const CONTENT_DIR = "content/locali";
@@ -150,15 +154,68 @@ jobs:
             return null;
           };
 
-          function parseFm(src) {
+          function splitFm(src) {
             const m = src.match(FM_RE);
             if (!m) return null;
-            return { data: parseYaml(m[1]), body: m[2] ?? "" };
+            return { fm: m[1], body: m[2] ?? "" };
           }
-          function serializeFm(data, body) {
-            const fm = dumpYaml(data, { lineWidth: -1, noRefs: true });
-            return `---\n${fm}---\n${body}`;
+
+          // Match top-level "<key>: <value>" (nessuna indentazione iniziale → niente match su entry annidate dentro visite[])
+          function readScalar(fm, key) {
+            const m = fm.match(new RegExp(`^${key}:[ \\t]*(.*)$`, "m"));
+            if (!m) return undefined;
+            let v = m[1].trim();
+            if (v === "" || v === "null" || v === "~") return null;
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+            return v;
           }
+
+          function readTipoArray(fm) {
+            // Flow form: tipo: [a, b]
+            const flow = fm.match(/^tipo:[ \t]*\[([^\]]*)\][ \t]*$/m);
+            if (flow) {
+              return flow[1]
+                .split(",")
+                .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+                .filter(Boolean);
+            }
+            // Block form: tipo:\n  - a\n  - b
+            const block = fm.match(/^tipo:[ \t]*\r?\n((?:[ \t]+-[ \t]+.*\r?\n?)+)/m);
+            if (block) {
+              return block[1]
+                .split(/\r?\n/)
+                .map((l) => l.replace(/^[ \t]+-[ \t]+/, "").trim())
+                .filter(Boolean)
+                .map((s) => s.replace(/^["']|["']$/g, ""));
+            }
+            return null;
+          }
+
+          function yamlQuoteIfNeeded(v) {
+            if (v === null || v === undefined) return "null";
+            const s = String(v);
+            // Bare YAML scalar safe se è ASCII + accenti italiani comuni e niente char ambigui
+            if (/^[A-Za-z0-9 .,àèéìòùÀÈÉÌÒÙ'\-]+$/.test(s) && !/^(null|true|false|yes|no|~)$/i.test(s)) return s;
+            return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+          }
+
+          function setScalar(fm, key, value) {
+            const re = new RegExp(`^(${key}:)[ \\t]*.*$`, "m");
+            if (!re.test(fm)) return fm; // se la chiave non esiste a top-level, no-op
+            return fm.replace(re, `$1 ${yamlQuoteIfNeeded(value)}`);
+          }
+
+          function setTipoArray(fm, arr) {
+            const block = `tipo:\n  - ${arr.map((s) => yamlQuoteIfNeeded(s)).join("\n  - ")}`;
+            if (/^tipo:[ \t]*\[[^\]]*\][ \t]*$/m.test(fm)) {
+              return fm.replace(/^tipo:[ \t]*\[[^\]]*\][ \t]*$/m, block);
+            }
+            if (/^tipo:[ \t]*\r?\n((?:[ \t]+-[ \t]+.*\r?\n?)+)/m.test(fm)) {
+              return fm.replace(/^tipo:[ \t]*\r?\n((?:[ \t]+-[ \t]+.*\r?\n?)+)/m, block + "\n");
+            }
+            return fm;
+          }
+
           function needsEnrichment(d) {
             const zonaGeneric = !d.zona || d.zona === "Milano";
             const tipoGeneric = Array.isArray(d.tipo) && d.tipo.length === 1 && d.tipo[0] === "altro";
@@ -205,33 +262,46 @@ jobs:
           let enriched = 0, missed = 0, skipped = 0, errors = 0;
           for (const file of files) {
             const full = path.join(CONTENT_DIR, file);
-            const src = await readFile(full, "utf8");
-            const parsed = parseFm(src);
-            if (!parsed) { console.log(`skip ${file}: no frontmatter`); skipped++; continue; }
-            const d = parsed.data;
-            if (!needsEnrichment(d)) { console.log(`skip ${file}: già arricchito`); skipped++; continue; }
+            const src = (await readFile(full, "utf8")).replace(/^﻿/, "");
+            const split = splitFm(src);
+            if (!split) { console.log(`skip ${file}: no frontmatter`); skipped++; continue; }
+            let { fm, body } = split;
+
+            const d = {
+              nome: readScalar(fm, "nome"),
+              zona: readScalar(fm, "zona"),
+              indirizzo: readScalar(fm, "indirizzo"),
+              tipo: readTipoArray(fm),
+            };
+
             if (!d.nome) { console.log(`skip ${file}: senza nome`); skipped++; continue; }
+            if (!needsEnrichment(d)) { console.log(`skip ${file}: già arricchito`); skipped++; continue; }
+
             try {
               const r = await textSearch(d.nome);
               if (!r?.place_id) { console.log(`miss ${file}: nessun risultato Places per "${d.nome}"`); missed++; continue; }
               const details = await placeDetails(r.place_id);
               if (!details) { missed++; continue; }
+
               let changed = false;
+              let newIndirizzo = d.indirizzo, newZona = d.zona, newTipo = d.tipo;
+
               if (!d.indirizzo) {
                 const ind = extractIndirizzo(details.formatted_address);
-                if (ind) { d.indirizzo = ind; changed = true; }
+                if (ind) { newIndirizzo = ind; fm = setScalar(fm, "indirizzo", ind); changed = true; }
               }
               if (!d.zona || d.zona === "Milano") {
                 const z = extractZona(details.address_components);
-                if (z) { d.zona = z; changed = true; }
+                if (z) { newZona = z; fm = setScalar(fm, "zona", z); changed = true; }
               }
               if (Array.isArray(d.tipo) && d.tipo.length === 1 && d.tipo[0] === "altro") {
                 const mapped = TYPE_MAP(details.types);
-                if (mapped) { d.tipo = [mapped]; changed = true; }
+                if (mapped) { newTipo = [mapped]; fm = setTipoArray(fm, [mapped]); changed = true; }
               }
+
               if (changed) {
-                await writeFile(full, serializeFm(d, parsed.body), "utf8");
-                console.log(`✓ enriched ${file}: indirizzo="${d.indirizzo ?? ""}" zona="${d.zona ?? ""}" tipo=${JSON.stringify(d.tipo)}`);
+                await writeFile(full, `---\n${fm}\n---\n${body}`, "utf8");
+                console.log(`✓ enriched ${file}: indirizzo="${newIndirizzo ?? ""}" zona="${newZona ?? ""}" tipo=${JSON.stringify(newTipo)}`);
                 enriched++;
               } else {
                 console.log(`no-op ${file}: Places non ha aggiunto info utili`);
