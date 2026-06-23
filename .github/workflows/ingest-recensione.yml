@@ -68,6 +68,11 @@ jobs:
                estrarre informazioni sul locale (piatti, drink, atmosfera, zona).
                Fondilo con la caption scritta. Non inventare nulla che non sia
                presente in caption o note audio.
+            3quater. Se nel body della issue è presente la sezione "**Locali
+               citati:**", per ogni locale nella lista usa il nome e l'indirizzo
+               forniti per creare o aggiornare il file MD corrispondente. Associa
+               nome → indirizzo esattamente come scritto. Non inventare indirizzi
+               non presenti nella lista.
             4. CLASSIFICA il post in due categorie prima di estrarre:
                - "singola": post dedicato a UN locale (testo descrittivo, opinioni,
                  piatti/drink citati, tono riconoscibile).
