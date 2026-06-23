@@ -64,7 +64,7 @@ async function uploadImage(token, owner, repo, path, contentB64) {
   });
 }
 
-function buildIssueBody({ post_url, data, caption, nome_locale_hint, note, note_audio, imageUrls }) {
+function buildIssueBody({ post_url, data, caption, nome_locale_hint, indirizzo, note, note_audio, imageUrls }) {
   // Riproduce il formato del Form ISSUE_TEMPLATE in modo leggibile dal workflow:
   // headings ### <Label del campo> seguiti dal valore.
   const lines = [];
@@ -90,6 +90,9 @@ function buildIssueBody({ post_url, data, caption, nome_locale_hint, note, note_
     note || "_No response_",
     ""
   );
+  if (indirizzo && String(indirizzo).trim()) {
+    lines.push("**Indirizzo:**", "", String(indirizzo).trim(), "");
+  }
   if (note_audio && String(note_audio).trim()) {
     lines.push("**Note audio (trascrizione reel):**", "", String(note_audio).trim(), "");
   }
@@ -124,7 +127,7 @@ export default async (req) => {
     return jsonResponse(401, { error: "Password errata" });
   }
 
-  const { post_url, data, caption, nome_locale_hint, note, note_audio, images } = body;
+  const { post_url, data, caption, nome_locale_hint, indirizzo, note, note_audio, images } = body;
   if (!post_url || !data || !caption) {
     return jsonResponse(400, {
       error: "Campi obbligatori mancanti: post_url, data, caption.",
@@ -157,6 +160,7 @@ export default async (req) => {
       data,
       caption,
       nome_locale_hint,
+      indirizzo,
       note,
       note_audio,
       imageUrls,
