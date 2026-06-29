@@ -16,6 +16,7 @@ async function gh(token: string, urlPath: string, init: RequestInit = {}) {
       Authorization: `token ${token}`,
       Accept: "application/vnd.github.v3+json",
       "content-type": "application/json",
+      "User-Agent": "aperitivi-urbani/1.0",
       ...((init.headers as Record<string, string>) || {}),
     },
   });
