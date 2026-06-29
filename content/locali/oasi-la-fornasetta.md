@@ -2,6 +2,8 @@
 nome: "OASI - La Fornasetta"
 slug: "oasi-la-fornasetta"
 indirizzo: "Via Ernesto Breda, 88, 20126 Milano MI, Italy"
+lat: 45.5089
+lng: 9.2201
 zona: "Precotto"
 tipo:
   - aperitivo
