@@ -1,6 +1,5 @@
 ---
 export const prerender = false;
-const mapsKey = import.meta.env.GOOGLE_MAPS_API_KEY;
 ---
 
 <!doctype html>
@@ -12,10 +11,7 @@ const mapsKey = import.meta.env.GOOGLE_MAPS_API_KEY;
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-    <script
-      src={`https://maps.googleapis.com/maps/api/js?key=${mapsKey}&libraries=places&callback=initAutocomplete`}
-      async
-      defer></script>
+    <!-- Maps loaded dynamically at runtime via /api/maps-key -->
     <style>
       *, *::before, *::after { box-sizing: border-box; }
       body { font-family: 'Inter', system-ui, sans-serif; background: #0f2a30; color: #f5f0e8; margin: 0; padding: 1.5rem; }
@@ -187,6 +183,18 @@ const mapsKey = import.meta.env.GOOGLE_MAPS_API_KEY;
     </div>
 
     <script is:inline>
+      (function () {
+        fetch('/api/maps-key')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var s = document.createElement('script');
+            s.src = 'https://maps.googleapis.com/maps/api/js?key=' + (data.key || '') + '&libraries=places&callback=initAutocomplete';
+            s.async = true;
+            s.defer = true;
+            document.head.appendChild(s);
+          });
+      })();
+
       window.initAutocomplete = function () {
         attachAutocomplete(0);
       };
