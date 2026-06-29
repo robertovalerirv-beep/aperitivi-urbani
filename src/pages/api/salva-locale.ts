@@ -147,12 +147,14 @@ interface InputBody {
   locali: LocaleInput[];
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const password = import.meta.env.ADMIN_PASSWORD;
-    const token = import.meta.env.GITHUB_TOKEN_INTAKE;
-    const owner = import.meta.env.INTAKE_REPO_OWNER;
-    const repo = import.meta.env.INTAKE_REPO_NAME;
+    const runtime = (locals as Record<string, unknown>).runtime as { env?: Record<string, string> } | undefined;
+    const env = runtime?.env ?? import.meta.env;
+    const password = env.ADMIN_PASSWORD;
+    const token = env.GITHUB_TOKEN_INTAKE;
+    const owner = env.INTAKE_REPO_OWNER;
+    const repo = env.INTAKE_REPO_NAME;
 
     if (!password || !token || !owner || !repo) {
       return jsonResponse(500, {

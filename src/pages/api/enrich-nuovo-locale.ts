@@ -9,9 +9,11 @@ function jsonResponse(status: number, body: object) {
   });
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const password = import.meta.env.ADMIN_PASSWORD;
+    const runtime = (locals as Record<string, unknown>).runtime as { env?: Record<string, string> } | undefined;
+    const env = runtime?.env ?? import.meta.env;
+    const password = env.ADMIN_PASSWORD;
     if (!password) {
       return jsonResponse(500, { error: "ADMIN_PASSWORD non configurata." });
     }
@@ -38,7 +40,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const testoPerAI = [caption, note_reel].filter(Boolean).join("\n\n---\n\n");
 
-    const anthropicKey = import.meta.env.ANTHROPIC_API_KEY;
+    const anthropicKey = env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {
       return jsonResponse(500, { error: "ANTHROPIC_API_KEY non configurata." });
     }
