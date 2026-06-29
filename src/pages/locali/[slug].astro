@@ -41,6 +41,18 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
       </p>
     )}
 
+    {loc.data.foto && loc.data.foto.length > 0 && (
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:1rem 0">
+        {loc.data.foto.map((f) => (
+          <img
+            src={`/images/locali/${loc.data.slug}/${f}`}
+            alt={loc.data.nome}
+            style="max-width:240px;border-radius:6px;object-fit:cover"
+          />
+        ))}
+      </div>
+    )}
+
     {loc.data.piatti_drink_citati.length > 0 && (
       <section>
         <h3>Citati nei post</h3>
