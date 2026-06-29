@@ -5,5 +5,7 @@ export default defineConfig({
   site: "https://aperitiviurbani.pages.dev",
   trailingSlash: "ignore",
   output: "static",
-  adapter: cloudflare(),
+  adapter: cloudflare({
+    platformProxy: { enabled: true },
+  }),
 });
