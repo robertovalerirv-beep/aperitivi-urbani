@@ -145,12 +145,6 @@ export const POST: APIRoute = async ({ request }) => {
   const owner = import.meta.env.INTAKE_REPO_OWNER;
   const repo = import.meta.env.INTAKE_REPO_NAME;
 
-  if (!password || !token || !owner || !repo) {
-    return jsonResponse(500, {
-      error: "Env mancanti. Servono: ADMIN_PASSWORD, GITHUB_TOKEN_INTAKE, INTAKE_REPO_OWNER, INTAKE_REPO_NAME.",
-    });
-  }
-
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch { return jsonResponse(400, { error: "Body JSON invalido" }); }
 
