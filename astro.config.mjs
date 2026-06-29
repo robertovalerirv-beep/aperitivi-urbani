@@ -4,6 +4,6 @@ import cloudflare from "@astrojs/cloudflare";
 export default defineConfig({
   site: "https://aperitiviurbani.pages.dev",
   trailingSlash: "ignore",
-  output: "hybrid",
+  output: "static",
   adapter: cloudflare(),
 });
