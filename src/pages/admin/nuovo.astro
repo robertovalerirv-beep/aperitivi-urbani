@@ -141,6 +141,8 @@ export const prerender = false;
                 <div class="field">
                   <label for="indirizzo-0">Indirizzo</label>
                   <input id="indirizzo-0" type="text" placeholder="Via Roma 12, Milano" autocomplete="off" />
+                  <input type="hidden" id="lat-0" name="lat">
+                  <input type="hidden" id="lng-0" name="lng">
                 </div>
                 <div class="field">
                   <label for="zona-0">Zona</label>
@@ -212,6 +214,13 @@ export const prerender = false;
           if (!place || !place.formatted_address) return;
           document.getElementById('indirizzo-' + index).value = place.formatted_address;
           document.getElementById('indirizzo-' + index).style.borderColor = '#3A8FA0';
+          var loc = place.geometry && place.geometry.location;
+          var latField = document.getElementById('lat-' + index);
+          var lngField = document.getElementById('lng-' + index);
+          if (loc && latField && lngField) {
+            latField.value = loc.lat();
+            lngField.value = loc.lng();
+          }
           var zona = (place.address_components || []).find(function (c) {
             return c.types.includes('neighborhood') || c.types.includes('sublocality');
           });
@@ -328,6 +337,8 @@ export const prerender = false;
           <div class="field">
             <label for="indirizzo-${idx}">Indirizzo</label>
             <input id="indirizzo-${idx}" type="text" placeholder="Via Roma 12, Milano" autocomplete="off" />
+            <input type="hidden" id="lat-${idx}" name="lat">
+            <input type="hidden" id="lng-${idx}" name="lng">
           </div>
           <div class="field">
             <label for="zona-${idx}">Zona</label>
@@ -388,6 +399,8 @@ export const prerender = false;
             indirizzo: (document.getElementById('indirizzo-0') as HTMLInputElement).value.trim(),
             zona: (document.getElementById('zona-0') as HTMLInputElement).value.trim(),
             fotoInput: document.getElementById('foto-0') as HTMLInputElement,
+            lat: parseFloat((document.getElementById('lat-0') as HTMLInputElement)?.value) || undefined,
+            lng: parseFloat((document.getElementById('lng-0') as HTMLInputElement)?.value) || undefined,
           }];
         }
         return Array.from(localiContainer.querySelectorAll<HTMLElement>('[data-index]')).map((block) => {
@@ -396,6 +409,8 @@ export const prerender = false;
             indirizzo: (document.getElementById(`indirizzo-${idx}`) as HTMLInputElement).value.trim(),
             zona: (document.getElementById(`zona-${idx}`) as HTMLInputElement).value.trim(),
             fotoInput: document.getElementById(`foto-${idx}`) as HTMLInputElement,
+            lat: parseFloat((document.getElementById(`lat-${idx}`) as HTMLInputElement)?.value) || undefined,
+            lng: parseFloat((document.getElementById(`lng-${idx}`) as HTMLInputElement)?.value) || undefined,
           };
         });
       }
@@ -426,7 +441,7 @@ export const prerender = false;
         const localiWithFoto = await Promise.all(localiInput.map(async (l) => {
           const files = Array.from(l.fotoInput?.files ?? []);
           const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1200)));
-          return { indirizzo: l.indirizzo, zona: l.zona, foto };
+          return { indirizzo: l.indirizzo, zona: l.zona, foto, lat: l.lat, lng: l.lng };
         }));
 
         let enrichData: Record<string, unknown> = {};
@@ -524,7 +539,7 @@ export const prerender = false;
           const step2Err = document.getElementById('step2-err')!;
           step2Err.style.display = 'none';
           const savedData = JSON.parse(sessionStorage.getItem('nuovo_locale_data') ?? '{}');
-          const locali = (savedData.locali ?? []) as { indirizzo: string; zona: string; foto: string[] }[];
+          const locali = (savedData.locali ?? []) as { indirizzo: string; zona: string; foto: string[]; lat?: number; lng?: number }[];
 
           const localiPayload = locali.map((l, i) => ({
             nome: (document.getElementById(`nome-${i}`) as HTMLInputElement).value.trim(),
@@ -537,6 +552,8 @@ export const prerender = false;
             sponsorizzato: (document.getElementById(`sponsor-${i}`) as HTMLInputElement).checked,
             piatti_drink_citati: (document.getElementById(`piatti-${i}`) as HTMLTextAreaElement).value.split('\n').map((s) => s.trim()).filter(Boolean),
             foto: l.foto,
+            lat: l.lat,
+            lng: l.lng,
           }));
 
           const invalid = localiPayload.filter((l) => !l.nome);

@@ -46,6 +46,8 @@ const locali = defineCollection({
     sponsorizzato: z.boolean().default(false),
     visite: z.array(visita).min(1),
     foto: z.array(z.string()).default([]),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
     ultima_estrazione: z.string().optional(),
   }),
 });

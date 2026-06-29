@@ -56,10 +56,11 @@ function buildFrontmatter(params: {
   tipo: string[]; fascia_prezzo: string | null; url_post: string;
   foto_names: string[]; data_visita: string; sentiment: string | null;
   voto: number | null; sponsorizzato: boolean; note_reel: string | null;
-  caption: string; piatti_drink: string[];
+  caption: string; piatti_drink: string[]; lat?: number; lng?: number;
 }): string {
   const { nome, slug, indirizzo, zona, tipo, fascia_prezzo, url_post, foto_names,
-    data_visita, sentiment, voto, sponsorizzato, note_reel, caption, piatti_drink } = params;
+    data_visita, sentiment, voto, sponsorizzato, note_reel, caption, piatti_drink,
+    lat, lng } = params;
 
   const tipoBlock = tipo.length > 0
     ? `tipo:\n  - ${tipo.join("\n  - ")}`
@@ -75,11 +76,13 @@ function buildFrontmatter(params: {
 nome: "${nome.replace(/"/g, '\\"')}"
 slug: "${slug}"
 indirizzo: "${indirizzo.replace(/"/g, '\\"')}"
-zona: "${zona.replace(/"/g, '\\"')}"
+${lat !== undefined ? `lat: ${lat}\n` : ""}${lng !== undefined ? `lng: ${lng}\n` : ""}zona: "${zona.replace(/"/g, '\\"')}"
 ${tipoBlock}
 fascia_prezzo: ${fascia_prezzo ? `"${fascia_prezzo}"` : "null"}
 instagram_url: "${url_post.replace(/"/g, '\\"')}"
 ${fotoBlock}
+sponsorizzato: ${sponsorizzato}
+${piattiBlock}
 visite:
   - data: "${data_visita}"
     sentiment: ${sentiment ? `"${sentiment}"` : "null"}
@@ -87,7 +90,6 @@ visite:
     sponsorizzato: ${sponsorizzato}
     note_reel: ${note_reel ? `"${note_reel.replace(/"/g, '\\"')}"` : "null"}
     caption: "${caption.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"
-    ${piattiBlock}
     post_url: "${url_post.replace(/"/g, '\\"')}"
     foto: []
 ---
@@ -137,6 +139,8 @@ interface LocaleInput {
   sponsorizzato: boolean;
   piatti_drink_citati: string[];
   foto: string[];
+  lat?: number;
+  lng?: number;
 }
 
 interface InputBody {
@@ -189,6 +193,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.push({ slug: nome || "(vuoto)", success: false, commit_url: null, foto_salvate: 0, error: "Nome non valido" });
         continue;
       }
+
+      const lat = locale.lat !== undefined ? parseFloat(String(locale.lat)) : undefined;
+      const lng = locale.lng !== undefined ? parseFloat(String(locale.lng)) : undefined;
 
       try {
         // STEP B — Blob foto su GitHub
@@ -255,6 +262,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
             note_reel: note_reel ?? null,
             caption,
             piatti_drink: locale.piatti_drink_citati ?? [],
+            lat: Number.isFinite(lat) ? lat : undefined,
+            lng: Number.isFinite(lng) ? lng : undefined,
           });
         }
 
