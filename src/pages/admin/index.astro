@@ -124,7 +124,7 @@ locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
   if (sessionStorage.getItem(STORAGE_KEY)) showLista();
 
   async function verify(pwd: string) {
-    const res = await fetch("/.netlify/functions/update-locale", {
+    const res = await fetch("/api/update-locale", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ password: pwd, ping: true }),

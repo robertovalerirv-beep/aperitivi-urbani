@@ -1,0 +1,573 @@
+---
+export const prerender = false;
+const mapsKey = import.meta.env.GOOGLE_MAPS_API_KEY;
+---
+
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nuovo locale — Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <script
+      src={`https://maps.googleapis.com/maps/api/js?key=${mapsKey}&libraries=places&callback=initAutocomplete`}
+      async
+      defer></script>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body { font-family: 'Inter', system-ui, sans-serif; background: #0f2a30; color: #f5f0e8; margin: 0; padding: 1.5rem; }
+      h1, h2, h3 { font-family: 'Fraunces', serif; }
+      .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(58,143,160,0.25); border-radius: 10px; padding: 1.5rem; max-width: 760px; margin: 0 auto 1.5rem; }
+      label { display: block; font-weight: 600; margin-bottom: 0.4rem; font-size: 0.95rem; }
+      input[type="text"], input[type="url"], input[type="date"], input[type="number"],
+      input[type="password"], textarea, select {
+        width: 100%; padding: 0.7rem 0.9rem;
+        border: 1px solid rgba(58,143,160,0.4); border-radius: 6px;
+        background: rgba(0,0,0,0.25); color: #f5f0e8; font: inherit;
+        min-height: 44px;
+      }
+      input[type="file"] { width: 100%; padding: 0.5rem; color: #f5f0e8; }
+      textarea { min-height: 120px; resize: vertical; }
+      .field { margin-bottom: 1.25rem; }
+      .btn-primary {
+        background: #3A8FA0; color: #fff; border: none; border-radius: 6px;
+        padding: 0.85rem 1.5rem; font: inherit; font-weight: 600;
+        cursor: pointer; min-height: 48px;
+      }
+      .btn-primary:hover { background: #2d7080; }
+      .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+      .btn-secondary {
+        background: transparent; border: 1px dashed #3A8FA0; color: #3A8FA0;
+        border-radius: 6px; padding: 0.55rem 1rem; font: inherit;
+        font-weight: 600; cursor: pointer; margin-top: 0.5rem;
+      }
+      .btn-secondary:hover { background: #3A8FA0; color: #fff; border-style: solid; }
+      .btn-remove {
+        background: transparent; border: 1px solid #e67e22; color: #e67e22;
+        border-radius: 6px; padding: 0.4rem 0.7rem; font: inherit;
+        cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+      }
+      .btn-remove:hover { background: #e67e22; color: #fff; }
+      .locale-block { background: rgba(58,143,160,0.08); border: 1px solid rgba(58,143,160,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+      .locale-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+      .chip-group { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+      .chip { display: inline-flex; align-items: center; cursor: pointer; user-select: none; }
+      .chip input { position: absolute; opacity: 0; pointer-events: none; }
+      .chip span { display: inline-block; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.2); color: #f5f0e8; border: 1px solid rgba(58,143,160,0.4); border-radius: 999px; font-size: 0.88rem; }
+      .chip input:checked + span { background: #3A8FA0; border-color: #3A8FA0; color: #fff; }
+      .radio-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+      .radio-chip { display: inline-flex; align-items: center; cursor: pointer; user-select: none; }
+      .radio-chip input { position: absolute; opacity: 0; pointer-events: none; }
+      .radio-chip span { display: inline-block; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.2); color: #f5f0e8; border: 1px solid rgba(58,143,160,0.4); border-radius: 999px; font-size: 0.88rem; }
+      .radio-chip input:checked + span { background: #3A8FA0; border-color: #3A8FA0; color: #fff; }
+      .toggle-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; }
+      .toggle-label input { width: auto; min-height: 0; }
+      .foto-preview { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+      .foto-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(58,143,160,0.3); }
+      .step { display: none; }
+      .step.active { display: block; }
+      .step-indicator { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+      .step-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(58,143,160,0.3); }
+      .step-dot.active { background: #3A8FA0; }
+      .loader { text-align: center; padding: 2rem; opacity: 0.7; }
+      .result-block { padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; }
+      .result-ok { background: rgba(46,160,67,0.15); border: 1px solid rgba(46,160,67,0.4); }
+      .result-err { background: rgba(230,67,67,0.15); border: 1px solid rgba(230,67,67,0.4); }
+      .error-msg { background: rgba(230,67,67,0.15); border: 1px solid rgba(230,67,67,0.4); border-radius: 6px; padding: 0.75rem 1rem; margin-top: 1rem; font-size: 0.9rem; }
+      .hint { font-size: 0.85rem; opacity: 0.7; margin: 0 0 0.5rem; }
+      .req { color: #3A8FA0; }
+      .radio-group-inline { display: flex; gap: 1rem; align-items: center; margin-top: 0.4rem; }
+      .radio-group-inline label { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 400; margin-bottom: 0; cursor: pointer; }
+      .radio-group-inline input { width: auto; min-height: 0; }
+    </style>
+  </head>
+  <body>
+    <div style="max-width:760px;margin:0 auto">
+      <p style="margin-bottom:0.5rem"><a href="/admin/" style="color:#3A8FA0">← lista locali</a></p>
+      <h1 style="margin-top:0.5rem">Nuovo locale</h1>
+
+      <section id="gate-section" class="card">
+        <h2 style="margin-top:0">Accesso admin</h2>
+        <div class="field">
+          <label for="gate-pwd">Password admin</label>
+          <input id="gate-pwd" type="password" autocomplete="off" />
+        </div>
+        <button id="gate-btn" type="button" class="btn-primary">Entra</button>
+        <p id="gate-err" style="display:none" class="error-msg"></p>
+      </section>
+
+      <div id="wizard" style="display:none">
+        <div class="step-indicator">
+          <div class="step-dot active" data-step="0"></div>
+          <div class="step-dot" data-step="1"></div>
+          <div class="step-dot" data-step="2"></div>
+        </div>
+
+        <!-- STEP 1 -->
+        <div class="step active" id="step-1">
+          <div class="card">
+            <h2 style="margin-top:0">Step 1 — Input grezzi</h2>
+
+            <div class="field">
+              <label>Tipo post</label>
+              <div class="radio-group-inline">
+                <label><input type="radio" name="modalita" value="singolo" checked /> Singolo</label>
+                <label><input type="radio" name="modalita" value="multiplo" /> Multiplo</label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="url_post">URL post Instagram <span class="req">*</span></label>
+              <input id="url_post" type="url" placeholder="https://www.instagram.com/p/..." />
+            </div>
+
+            <div class="field">
+              <label for="data_visita">Data visita <span class="req">*</span></label>
+              <input id="data_visita" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="caption">Caption <span class="req">*</span></label>
+              <textarea id="caption" rows="8" placeholder="Incolla la caption integrale del post Instagram"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="note_reel">Note reel / trascrizione</label>
+              <p class="hint">Usa questo campo se il post è un reel — scrivi i nomi dei locali e i dettagli detti nel video</p>
+              <textarea id="note_reel" rows="3"></textarea>
+            </div>
+
+            <div id="singolo-block">
+              <div class="locale-block">
+                <div class="field">
+                  <label for="indirizzo-0">Indirizzo</label>
+                  <input id="indirizzo-0" type="text" placeholder="Via Roma 12, Milano" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="zona-0">Zona</label>
+                  <input id="zona-0" type="text" placeholder="Es. Navigli, NoLo, Isola" />
+                </div>
+                <div class="field">
+                  <label>Foto</label>
+                  <input id="foto-0" type="file" accept="image/*" multiple />
+                </div>
+              </div>
+            </div>
+
+            <div id="multiplo-block" style="display:none">
+              <div id="locali-container"></div>
+              <button type="button" id="add-locale-btn" class="btn-secondary">+ Aggiungi locale</button>
+            </div>
+
+            <div style="margin-top:1.5rem">
+              <button id="analizza-btn" type="button" class="btn-primary">Analizza →</button>
+              <p id="step1-err" style="display:none" class="error-msg"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="step" id="step-2">
+          <div id="step2-loader" class="loader">Analisi AI in corso…</div>
+          <div id="step2-content" style="display:none"></div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="step" id="step-3">
+          <div class="card">
+            <h2 style="margin-top:0">Step 3 — Conferma</h2>
+            <div id="step3-results"></div>
+            <p style="margin-top:1.5rem"><a href="/admin/" style="color:#3A8FA0">← torna alla lista</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script is:inline>
+      window.initAutocomplete = function () {
+        attachAutocomplete(0);
+      };
+
+      function attachAutocomplete(index) {
+        var input = document.getElementById('indirizzo-' + index);
+        if (!input) return;
+        var ac = new google.maps.places.Autocomplete(input, {
+          componentRestrictions: { country: 'it' },
+          fields: ['formatted_address', 'address_components', 'geometry'],
+          types: ['establishment', 'geocode']
+        });
+        ac.addListener('place_changed', function () {
+          var place = ac.getPlace();
+          if (!place || !place.formatted_address) return;
+          document.getElementById('indirizzo-' + index).value = place.formatted_address;
+          document.getElementById('indirizzo-' + index).style.borderColor = '#3A8FA0';
+          var zona = (place.address_components || []).find(function (c) {
+            return c.types.includes('neighborhood') || c.types.includes('sublocality');
+          });
+          var zonaField = document.getElementById('zona-' + index);
+          if (zona) {
+            zonaField.value = zona.long_name;
+            zonaField.style.borderColor = '#3A8FA0';
+          } else {
+            zonaField.value = '';
+            zonaField.placeholder = 'Non trovata — inserisci manualmente';
+            zonaField.style.borderColor = '#e67e22';
+          }
+        });
+      }
+
+      function attachAutocompleteToNew(index) {
+        setTimeout(function () { attachAutocomplete(index); }, 50);
+      }
+
+      function resizeImage(file, maxPx) {
+        return new Promise(function (resolve) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            var img = new Image();
+            img.onload = function () {
+              var w = img.width;
+              var h = img.height;
+              if (w > maxPx || h > maxPx) {
+                var ratio = Math.min(maxPx / w, maxPx / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+              }
+              var canvas = document.createElement('canvas');
+              canvas.width = w;
+              canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+              resolve(dataUrl.split(',')[1]);
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    </script>
+
+    <script>
+      const STORAGE_KEY = 'admin_pwd_v1';
+
+      // Gate
+      const gateSection = document.getElementById('gate-section')!;
+      const wizard = document.getElementById('wizard')!;
+      const gatePwd = document.getElementById('gate-pwd') as HTMLInputElement;
+      const gateBtn = document.getElementById('gate-btn') as HTMLButtonElement;
+      const gateErr = document.getElementById('gate-err') as HTMLElement;
+
+      let adminPwd = sessionStorage.getItem(STORAGE_KEY) ?? '';
+      if (adminPwd) { gateSection.style.display = 'none'; wizard.style.display = ''; }
+
+      gateBtn.addEventListener('click', async () => {
+        gateErr.style.display = 'none';
+        const pwd = gatePwd.value.trim();
+        if (!pwd) { gateErr.textContent = 'Inserisci la password.'; gateErr.style.display = ''; return; }
+        gateBtn.disabled = true;
+        try {
+          const res = await fetch('/api/update-locale', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ password: pwd, ping: true }),
+          });
+          if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || `HTTP ${res.status}`); }
+          adminPwd = pwd;
+          sessionStorage.setItem(STORAGE_KEY, pwd);
+          gateSection.style.display = 'none';
+          wizard.style.display = '';
+        } catch (e) {
+          gateErr.textContent = (e as Error).message;
+          gateErr.style.display = '';
+        } finally {
+          gateBtn.disabled = false;
+        }
+      });
+      gatePwd.addEventListener('keydown', (e) => { if (e.key === 'Enter') gateBtn.click(); });
+
+      // Step management
+      let currentStep = 0;
+      function goToStep(n: number) {
+        document.querySelectorAll('.step').forEach((s, i) => {
+          s.classList.toggle('active', i === n);
+        });
+        document.querySelectorAll('.step-dot').forEach((d, i) => {
+          d.classList.toggle('active', i === n);
+        });
+        currentStep = n;
+      }
+
+      // Modalità
+      const modRadios = document.querySelectorAll<HTMLInputElement>('input[name="modalita"]');
+      const singoloBlock = document.getElementById('singolo-block')!;
+      const multiploBlock = document.getElementById('multiplo-block')!;
+      const localiContainer = document.getElementById('locali-container')!;
+      let localeCount = 0;
+
+      function addLocaleBlock() {
+        const idx = localeCount++;
+        const div = document.createElement('div');
+        div.className = 'locale-block';
+        div.dataset.index = String(idx);
+        div.innerHTML = `
+          <div class="locale-block-header">
+            <strong>Locale ${idx + 1}</strong>
+            <button type="button" class="btn-remove" onclick="this.closest('[data-index]').remove()">Rimuovi</button>
+          </div>
+          <div class="field">
+            <label for="indirizzo-${idx}">Indirizzo</label>
+            <input id="indirizzo-${idx}" type="text" placeholder="Via Roma 12, Milano" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="zona-${idx}">Zona</label>
+            <input id="zona-${idx}" type="text" placeholder="Es. Navigli, NoLo" />
+          </div>
+          <div class="field">
+            <label>Foto</label>
+            <input id="foto-${idx}" type="file" accept="image/*" multiple />
+          </div>
+        `;
+        localiContainer.appendChild(div);
+        (window as unknown as Record<string, (n: number) => void>).attachAutocompleteToNew(idx);
+      }
+
+      modRadios.forEach((r) => r.addEventListener('change', () => {
+        const isMulti = r.value === 'multiplo' && r.checked;
+        singoloBlock.style.display = isMulti ? 'none' : '';
+        multiploBlock.style.display = isMulti ? '' : 'none';
+        if (isMulti && localeCount === 0) addLocaleBlock();
+      }));
+      document.getElementById('add-locale-btn')!.addEventListener('click', addLocaleBlock);
+
+      // Foto preview live (singolo)
+      document.getElementById('foto-0')!.addEventListener('change', (e) => {
+        const files = (e.target as HTMLInputElement).files;
+        updateFotoPreview('preview-foto-0', files);
+      });
+
+      function updateFotoPreview(containerId: string, files: FileList | null) {
+        let container = document.getElementById(containerId);
+        if (!container) {
+          container = document.createElement('div');
+          container.id = containerId;
+          container.className = 'foto-preview';
+          const fileInput = document.querySelector(`#${containerId.replace('preview-', '')}`)!;
+          fileInput.parentNode!.insertBefore(container, fileInput.nextSibling);
+        }
+        container.innerHTML = '';
+        if (!files) return;
+        Array.from(files).forEach((f) => {
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(f);
+          img.alt = f.name;
+          container!.appendChild(img);
+        });
+      }
+
+      // Colleziona input Step 1
+      function getModalita(): 'singolo' | 'multiplo' {
+        for (const r of modRadios) { if (r.checked) return r.value as 'singolo' | 'multiplo'; }
+        return 'singolo';
+      }
+
+      function getLocaliInput() {
+        const modalita = getModalita();
+        if (modalita === 'singolo') {
+          return [{
+            indirizzo: (document.getElementById('indirizzo-0') as HTMLInputElement).value.trim(),
+            zona: (document.getElementById('zona-0') as HTMLInputElement).value.trim(),
+            fotoInput: document.getElementById('foto-0') as HTMLInputElement,
+          }];
+        }
+        return Array.from(localiContainer.querySelectorAll<HTMLElement>('[data-index]')).map((block) => {
+          const idx = block.dataset.index!;
+          return {
+            indirizzo: (document.getElementById(`indirizzo-${idx}`) as HTMLInputElement).value.trim(),
+            zona: (document.getElementById(`zona-${idx}`) as HTMLInputElement).value.trim(),
+            fotoInput: document.getElementById(`foto-${idx}`) as HTMLInputElement,
+          };
+        });
+      }
+
+      // Step 1 → Step 2
+      document.getElementById('analizza-btn')!.addEventListener('click', async () => {
+        const err = document.getElementById('step1-err')!;
+        err.style.display = 'none';
+
+        const url_post = (document.getElementById('url_post') as HTMLInputElement).value.trim();
+        const data_visita = (document.getElementById('data_visita') as HTMLInputElement).value.trim();
+        const caption = (document.getElementById('caption') as HTMLTextAreaElement).value.trim();
+
+        if (!url_post) { err.textContent = 'URL post obbligatorio.'; err.style.display = ''; return; }
+        if (!caption) { err.textContent = 'Caption obbligatoria.'; err.style.display = ''; return; }
+        const localiInput = getLocaliInput();
+        if (!localiInput.some((l) => l.indirizzo)) {
+          err.textContent = 'Almeno un indirizzo deve essere compilato.'; err.style.display = ''; return;
+        }
+
+        goToStep(1);
+        const loader = document.getElementById('step2-loader')!;
+        const content = document.getElementById('step2-content')!;
+        loader.style.display = '';
+        content.style.display = 'none';
+
+        // Resize foto
+        const localiWithFoto = await Promise.all(localiInput.map(async (l) => {
+          const files = Array.from(l.fotoInput?.files ?? []);
+          const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1200)));
+          return { indirizzo: l.indirizzo, zona: l.zona, foto };
+        }));
+
+        let enrichData: Record<string, unknown> = {};
+        try {
+          const res = await fetch('/api/enrich-nuovo-locale', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              password: adminPwd,
+              url_post,
+              data_visita,
+              caption,
+              note_reel: (document.getElementById('note_reel') as HTMLTextAreaElement).value.trim() || null,
+              modalita: getModalita(),
+              locali: localiWithFoto,
+            }),
+          });
+          enrichData = await res.json();
+          if (!res.ok) throw new Error((enrichData as Record<string, string>).error || `HTTP ${res.status}`);
+        } catch (e) {
+          loader.style.display = 'none';
+          content.innerHTML = `<div class="card error-msg">${(e as Error).message}</div>`;
+          content.style.display = '';
+          return;
+        }
+
+        // Salva in sessionStorage
+        const sessionData = { url_post, data_visita, caption, note_reel: (document.getElementById('note_reel') as HTMLTextAreaElement).value.trim() || null, modalita: getModalita(), locali: localiWithFoto, arricchimento: enrichData.arricchimento };
+        sessionStorage.setItem('nuovo_locale_data', JSON.stringify(sessionData));
+
+        loader.style.display = 'none';
+        const arric = enrichData.arricchimento as Record<string, unknown> ?? {};
+        const TIPI = ['aperitivo','ristorante','cocktail-bar','wine-bar','bistrot','trattoria','pizzeria','caffetteria','altro'];
+        const FASCE = ['€','€€','€€€','€€€€'];
+        const SENTIMENTS = ['entusiasta','positivo','neutro','tiepido','critico'];
+
+        const localiArr = localiWithFoto.map((l, i) => {
+          return `
+          <div class="card" style="margin-bottom:1rem" data-locale-idx="${i}">
+            <h3 style="margin-top:0">Locale ${i + 1}: ${l.indirizzo || '(indirizzo non inserito)'}</h3>
+            <div class="field">
+              <label for="nome-${i}">Nome locale <span class="req">*</span></label>
+              <input id="nome-${i}" type="text" placeholder="Nome del locale" />
+            </div>
+            <div class="field">
+              <label>Tipo</label>
+              <div class="chip-group">
+                ${TIPI.map((t) => `<label class="chip"><input type="checkbox" class="tipo-cb-${i}" value="${t}" ${(arric.tipo as string[] ?? []).includes(t) ? 'checked' : ''} /><span>${t}</span></label>`).join('')}
+              </div>
+            </div>
+            <div class="field">
+              <label>Fascia prezzo</label>
+              <div class="radio-group">
+                ${FASCE.map((f) => `<label class="radio-chip"><input type="radio" name="fascia-${i}" value="${f}" ${arric.fascia_prezzo === f ? 'checked' : ''} /><span>${f}</span></label>`).join('')}
+              </div>
+            </div>
+            <div class="field">
+              <label for="sentiment-${i}">Sentiment</label>
+              <select id="sentiment-${i}">
+                <option value="">— nessuno —</option>
+                ${SENTIMENTS.map((s) => `<option value="${s}" ${arric.sentiment === s ? 'selected' : ''}>${s}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label for="voto-${i}">Voto dedotto (1-5)</label>
+              <input id="voto-${i}" type="number" min="1" max="5" step="0.5" value="${arric.voto_dedotto ?? ''}" />
+            </div>
+            <div class="field">
+              <label class="toggle-label">
+                <input id="sponsor-${i}" type="checkbox" ${arric.sponsorizzato ? 'checked' : ''} />
+                <span>Sponsorizzato</span>
+              </label>
+            </div>
+            <div class="field">
+              <label for="piatti-${i}">Piatti / drink citati</label>
+              <textarea id="piatti-${i}" rows="4" placeholder="Uno per riga">${(arric.piatti_drink_citati as string[] ?? []).join('\n')}</textarea>
+            </div>
+            ${l.foto.length > 0 ? `<div class="field"><label>Foto selezionate (${l.foto.length})</label><div class="foto-preview">${l.foto.map(() => '<div style="width:60px;height:60px;background:rgba(58,143,160,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:#3A8FA0">img</div>').join('')}</div></div>` : ''}
+          </div>`;
+        }).join('');
+
+        content.innerHTML = `
+          <div class="card">
+            <h2 style="margin-top:0">Step 2 — Precompilazione</h2>
+            <p class="hint">Controlla e correggi i campi estratti automaticamente dall'AI.</p>
+          </div>
+          ${localiArr}
+          <div style="max-width:760px;margin:0 auto 1.5rem">
+            <button id="pubblica-btn" type="button" class="btn-primary" style="width:100%">Pubblica →</button>
+            <p id="step2-err" style="display:none;margin-top:0.75rem" class="error-msg"></p>
+          </div>`;
+        content.style.display = '';
+
+        document.getElementById('pubblica-btn')!.addEventListener('click', async () => {
+          const step2Err = document.getElementById('step2-err')!;
+          step2Err.style.display = 'none';
+          const savedData = JSON.parse(sessionStorage.getItem('nuovo_locale_data') ?? '{}');
+          const locali = (savedData.locali ?? []) as { indirizzo: string; zona: string; foto: string[] }[];
+
+          const localiPayload = locali.map((l, i) => ({
+            nome: (document.getElementById(`nome-${i}`) as HTMLInputElement).value.trim(),
+            indirizzo: l.indirizzo,
+            zona: l.zona,
+            tipo: Array.from(document.querySelectorAll<HTMLInputElement>(`.tipo-cb-${i}:checked`)).map((c) => c.value),
+            fascia_prezzo: (document.querySelector<HTMLInputElement>(`input[name="fascia-${i}"]:checked`)?.value) ?? null,
+            sentiment: (document.getElementById(`sentiment-${i}`) as HTMLSelectElement).value || null,
+            voto_dedotto: (document.getElementById(`voto-${i}`) as HTMLInputElement).value ? Number((document.getElementById(`voto-${i}`) as HTMLInputElement).value) : null,
+            sponsorizzato: (document.getElementById(`sponsor-${i}`) as HTMLInputElement).checked,
+            piatti_drink_citati: (document.getElementById(`piatti-${i}`) as HTMLTextAreaElement).value.split('\n').map((s) => s.trim()).filter(Boolean),
+            foto: l.foto,
+          }));
+
+          const invalid = localiPayload.filter((l) => !l.nome);
+          if (invalid.length > 0) { step2Err.textContent = 'Ogni locale deve avere un nome.'; step2Err.style.display = ''; return; }
+
+          const btn = document.getElementById('pubblica-btn') as HTMLButtonElement;
+          btn.disabled = true;
+          btn.textContent = 'Pubblicazione…';
+
+          try {
+            const res = await fetch('/api/salva-locale', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                password: adminPwd,
+                url_post: savedData.url_post,
+                data_visita: savedData.data_visita,
+                caption: savedData.caption,
+                note_reel: savedData.note_reel,
+                locali: localiPayload,
+              }),
+            });
+            const results = await res.json();
+            if (!res.ok && !Array.isArray(results)) throw new Error(results.error || `HTTP ${res.status}`);
+            sessionStorage.removeItem('nuovo_locale_data');
+            goToStep(2);
+            const resultsEl = document.getElementById('step3-results')!;
+            resultsEl.innerHTML = (results as { slug: string; success: boolean; commit_url: string | null; foto_salvate: number; error?: string }[]).map((r) => `
+              <div class="result-block ${r.success ? 'result-ok' : 'result-err'}">
+                <strong>${r.slug}</strong> — ${r.success ? `✓ Salvato. ${r.foto_salvate} foto. ${r.commit_url ? `<a href="${r.commit_url}" target="_blank" rel="noopener" style="color:#3A8FA0">commit ↗</a>` : ''}` : `✗ Errore: ${r.error}`}
+              </div>`).join('');
+          } catch (e) {
+            step2Err.textContent = (e as Error).message;
+            step2Err.style.display = '';
+            btn.disabled = false;
+            btn.textContent = 'Pubblica →';
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

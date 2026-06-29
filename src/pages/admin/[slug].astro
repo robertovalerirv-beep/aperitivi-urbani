@@ -167,7 +167,7 @@ const initial = {
     if (!pwd) { gateErr.textContent = "Inserisci la password."; gateErr.style.display = ""; return; }
     gateBtn.disabled = true;
     try {
-      const res = await fetch("/.netlify/functions/update-locale", {
+      const res = await fetch("/api/update-locale", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ password: pwd, ping: true }),
@@ -217,7 +217,7 @@ const initial = {
     submitBtn.disabled = true;
     submitBtn.textContent = "Salvataggio…";
     try {
-      const res = await fetch("/.netlify/functions/update-locale", {
+      const res = await fetch("/api/update-locale", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ password: pwd, slug, fields }),
@@ -229,7 +229,7 @@ const initial = {
         return;
       }
       if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
-      let msg = "Modifica salvata. Il sito si ricostruirà su Netlify in 1-2 minuti.";
+      let msg = "Modifica salvata. Il sito si ricostruirà su Cloudflare Pages in 1-2 minuti.";
       if (j.commit_url) {
         msg += ` <a href="${j.commit_url}" target="_blank" rel="noopener">commit ↗</a>`;
       }

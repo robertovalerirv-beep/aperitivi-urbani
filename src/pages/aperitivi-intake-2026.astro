@@ -1,4 +1,5 @@
 ---
+export const prerender = true;
 import Layout from "../layouts/Layout.astro";
 ---
 
@@ -252,7 +253,7 @@ import Layout from "../layouts/Layout.astro";
     }
     gateBtn.disabled = true;
     try {
-      const res = await fetch("/.netlify/functions/verify-password", {
+      const res = await fetch("/api/verify-password", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ password: pwd }),
@@ -357,7 +358,7 @@ import Layout from "../layouts/Layout.astro";
     submitBtn.disabled = true;
     submitBtn.textContent = "Invio in corso…";
     try {
-      const res = await fetch("/.netlify/functions/create-issue", {
+      const res = await fetch("/api/create-issue", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
