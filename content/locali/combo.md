@@ -1,14 +1,17 @@
 ---
-nome: "Combo"
+nome: Combo
 slug: "combo"
-indirizzo: "Ripa di Porta Ticinese, 83, 20143 Milano MI, Italia"
+voto_dedotto: 5
+sentiment: entusiasta
+citta: Milano
+indirizzo: Ripa di Porta Ticinese, 83, 20143 Milano MI, Italia
 lat: 45.4497584
 lng: 9.1668972
-zona: "Ticinese"
+zona: Ticinese
 tipo:
   - aperitivo
   - ristorante
-fascia_prezzo: "€"
+fascia_prezzo: €
 instagram_url: "https://www.instagram.com/reel/DZm6FPftSBR/?igsh=aXZwOTIxODF3aHlm"
 foto:
   - combo-1.jpg
