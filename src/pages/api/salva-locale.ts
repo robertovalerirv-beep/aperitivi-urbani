@@ -83,10 +83,10 @@ instagram_url: "${url_post.replace(/"/g, '\\"')}"
 ${fotoBlock}
 sponsorizzato: ${sponsorizzato}
 ${piattiBlock}
+sentiment: ${sentiment ? `"${sentiment}"` : "null"}
+voto_dedotto: ${voto !== null ? voto : "null"}
 visite:
   - data: "${data_visita}"
-    sentiment: ${sentiment ? `"${sentiment}"` : "null"}
-    voto: ${voto !== null ? voto : "null"}
     sponsorizzato: ${sponsorizzato}
     note_reel: ${note_reel ? `"${note_reel.replace(/"/g, '\\"')}"` : "null"}
     caption: "${caption.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"
