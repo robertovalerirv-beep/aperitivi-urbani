@@ -102,13 +102,30 @@ function appendVisita(existingMd: string, params: {
   piatti_drink: string[]; url_post: string; foto_names: string[];
 }): string {
   const { data_visita, sentiment, voto, sponsorizzato, note_reel, caption, piatti_drink, url_post } = params;
+
+  let md = existingMd;
+  const sentimentValue = sentiment ? `"${sentiment}"` : "null";
+  const votoValue = voto !== null ? String(voto) : "null";
+
+  const sentimentRe = /^(sentiment:)[ \t]*.*$/m;
+  if (sentimentRe.test(md)) {
+    md = md.replace(sentimentRe, `$1 ${sentimentValue}`);
+  } else {
+    md = md.replace(/^visite:/m, `sentiment: ${sentimentValue}\nvisite:`);
+  }
+
+  const votoRe = /^(voto_dedotto:)[ \t]*.*$/m;
+  if (votoRe.test(md)) {
+    md = md.replace(votoRe, `$1 ${votoValue}`);
+  } else {
+    md = md.replace(/^visite:/m, `voto_dedotto: ${votoValue}\nvisite:`);
+  }
+
   const piattiBlock = piatti_drink.length > 0
     ? `\n    piatti_drink_citati:\n      - ${piatti_drink.join("\n      - ")}`
     : `\n    piatti_drink_citati: []`;
 
   const nuovaVisita = `  - data: "${data_visita}"
-    sentiment: ${sentiment ? `"${sentiment}"` : "null"}
-    voto: ${voto !== null ? voto : "null"}
     sponsorizzato: ${sponsorizzato}
     note_reel: ${note_reel ? `"${note_reel.replace(/"/g, '\\"')}"` : "null"}
     caption: "${caption.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"${piattiBlock}
@@ -116,16 +133,16 @@ function appendVisita(existingMd: string, params: {
     foto: []`;
 
   const visisteRe = /^visite:\s*$/m;
-  if (visisteRe.test(existingMd)) {
-    return existingMd.replace(visisteRe, `visite:\n${nuovaVisita}`);
+  if (visisteRe.test(md)) {
+    return md.replace(visisteRe, `visite:\n${nuovaVisita}`);
   }
   const lastVisitaRe = /^(visite:[\s\S]*?)(\n---\n|$)/m;
-  const m = existingMd.match(lastVisitaRe);
+  const m = md.match(lastVisitaRe);
   if (m) {
     const insert = m[0].replace(m[2], `\n${nuovaVisita}${m[2]}`);
-    return existingMd.replace(lastVisitaRe, insert);
+    return md.replace(lastVisitaRe, insert);
   }
-  return existingMd;
+  return md;
 }
 
 interface LocaleInput {
