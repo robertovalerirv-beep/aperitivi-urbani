@@ -1,13 +1,16 @@
 ---
-nome: "Il Retrobottega"
+nome: Il Retrobottega
 slug: "il-retrobottega"
-indirizzo: "Viale Monte Grappa, 6A, 20124 Milano MI, Italia"
+voto_dedotto: 5
+sentiment: positivo
+citta: Milano
+indirizzo: Viale Monte Grappa, 6A, 20124 Milano MI, Italia
 lat: 45.4806314
 lng: 9.1913454
-zona: "Porta Garibaldi"
+zona: Porta Garibaldi
 tipo:
   - bistrot
-fascia_prezzo: "€€€"
+fascia_prezzo: €€€
 instagram_url: "https://www.instagram.com/reel/DZm6FPftSBR/?igsh=aXZwOTIxODF3aHlm"
 foto:
   - il-retrobottega-1.jpg
