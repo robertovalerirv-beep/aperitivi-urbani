@@ -98,6 +98,13 @@ const { title, description } = Astro.props;
       }
       .card a { color: var(--ink); }
       .card .muted { color: var(--muted); }
+      .card-link {
+        display: block;
+        text-decoration: none;
+      }
+      .card-link:hover {
+        text-decoration: none;
+      }
       .stars { color: var(--accent); font-weight: 600; }
 
       @media (max-width: 640px) {

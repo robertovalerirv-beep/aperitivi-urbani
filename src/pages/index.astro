@@ -93,23 +93,25 @@ const mapLocaliJson = JSON.stringify(mapLocali);
           data-fascia={loc.data.fascia_prezzo ?? ""}
           data-sponsor={loc.data.sponsorizzato ? "1" : "0"}
         >
-          <a href={`/locali/${loc.data.slug}/`} style="font-size:1.15rem;font-weight:600;font-family:'Fraunces',serif">
-            {loc.data.nome}
-          </a>
-          <div class="muted" style="font-size:0.9rem;margin-top:0.25rem">
-            {loc.data.zona ?? "Milano"} · {loc.data.tipo.join(", ")}
-          </div>
-          {loc.data.voto_dedotto != null && (
-            <div class="stars" style="margin-top:0.5rem">
-              {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
+          <a href={`/locali/${loc.data.slug}/`} class="card-link">
+            <div style="font-size:1.15rem;font-weight:600;font-family:'Fraunces',serif">
+              {loc.data.nome}
             </div>
-          )}
-          <div class="muted" style="font-size:0.85rem;margin-top:0.5rem">
-            ultima visita: {ultima.data}
-          </div>
-          {loc.data.sponsorizzato && (
-            <div style="margin-top:0.5rem;display:inline-block;background:var(--warn-bg);color:var(--ink);font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:4px">sponsorizzato</div>
-          )}
+            <div class="muted" style="font-size:0.9rem;margin-top:0.25rem">
+              {loc.data.zona ?? "Milano"} · {loc.data.tipo.join(", ")}
+            </div>
+            {loc.data.voto_dedotto != null && (
+              <div class="stars" style="margin-top:0.5rem">
+                {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
+              </div>
+            )}
+            <div class="muted" style="font-size:0.85rem;margin-top:0.5rem">
+              ultima visita: {ultima.data}
+            </div>
+            {loc.data.sponsorizzato && (
+              <div style="margin-top:0.5rem;display:inline-block;background:var(--warn-bg);color:var(--ink);font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:4px">sponsorizzato</div>
+            )}
+          </a>
         </li>
       );
     })}
