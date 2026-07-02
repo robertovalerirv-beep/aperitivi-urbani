@@ -42,15 +42,57 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
     )}
 
     {loc.data.foto && loc.data.foto.length > 0 && (
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:1rem 0">
-        {loc.data.foto.map((f) => (
+      <div class="gallery" style="margin:1rem 0">
+        <div style="position:relative">
           <img
-            src={`/images/locali/${loc.data.slug}/${f}`}
+            id="gallery-hero-img"
+            src={`/images/locali/${loc.data.slug}/${loc.data.foto[0]}`}
             alt={loc.data.nome}
-            style="max-width:240px;border-radius:6px;object-fit:cover"
+            style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block"
           />
-        ))}
+          {loc.data.foto.length > 1 && (
+            <div id="gallery-counter" style="position:absolute;bottom:8px;right:8px;background:rgba(27,57,66,0.55);color:#fff;font-size:0.75rem;padding:0.15rem 0.6rem;border-radius:999px">
+              1 / {loc.data.foto.length}
+            </div>
+          )}
+        </div>
+        {loc.data.foto.length > 1 && (
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;overflow-x:auto">
+            {loc.data.foto.map((f, i) => (
+              <img
+                class="gallery-thumb"
+                data-index={i}
+                data-full={`/images/locali/${loc.data.slug}/${f}`}
+                src={`/images/locali/${loc.data.slug}/${f}`}
+                alt=""
+                style={`width:56px;height:56px;object-fit:cover;border-radius:6px;cursor:pointer;flex:0 0 auto;border:2px solid ${i === 0 ? "var(--accent)" : "transparent"}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
+    )}
+
+    {loc.data.foto && loc.data.foto.length > 1 && (
+      <script is:inline define:vars={{ totale: loc.data.foto.length }}>
+        (function() {
+          var hero = document.getElementById('gallery-hero-img');
+          var counter = document.getElementById('gallery-counter');
+          var thumbs = document.querySelectorAll('.gallery-thumb');
+          thumbs.forEach(function(t) {
+            t.addEventListener('click', function() {
+              hero.src = t.getAttribute('data-full');
+              thumbs.forEach(function(other) {
+                other.style.border = '2px solid transparent';
+              });
+              t.style.border = '2px solid var(--accent)';
+              if (counter) {
+                counter.textContent = (parseInt(t.getAttribute('data-index'), 10) + 1) + ' / ' + totale;
+              }
+            });
+          });
+        })();
+      </script>
     )}
 
     {loc.data.piatti_drink_citati.length > 0 && (
