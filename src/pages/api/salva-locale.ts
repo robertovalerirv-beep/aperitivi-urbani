@@ -51,6 +51,30 @@ function makeSlug(nome: string): string {
     .trim();
 }
 
+function getRootFoto(md: string): string[] {
+  const blockMatch = md.match(/^foto:\n((?:  - .*\n)*)/m);
+  if (!blockMatch) return [];
+  return blockMatch[1]
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.replace(/^  - /, "").trim());
+}
+
+function mergeRootFoto(md: string, newNames: string[]): string {
+  if (newNames.length === 0) return md;
+  const existing = getRootFoto(md);
+  const merged = [...existing];
+  for (const n of newNames) {
+    if (!merged.includes(n)) merged.push(n);
+  }
+  const blockRe = /^foto:\n(?:  - .*\n)*/m;
+  const inlineRe = /^foto: \[\]$/m;
+  if (blockRe.test(md)) {
+    return md.replace(blockRe, `foto:\n  - ${merged.join("\n  - ")}\n`);
+  }
+  return md.replace(inlineRe, `foto:\n  - ${merged.join("\n  - ")}`);
+}
+
 function buildFrontmatter(params: {
   nome: string; slug: string; indirizzo: string; zona: string;
   tipo: string[]; fascia_prezzo: string | null; url_post: string;
@@ -101,7 +125,7 @@ function appendVisita(existingMd: string, params: {
   sponsorizzato: boolean; note_reel: string | null; caption: string;
   piatti_drink: string[]; url_post: string; foto_names: string[];
 }): string {
-  const { data_visita, sentiment, voto, sponsorizzato, note_reel, caption, piatti_drink, url_post } = params;
+  const { data_visita, sentiment, voto, sponsorizzato, note_reel, caption, piatti_drink, url_post, foto_names } = params;
 
   let md = existingMd;
   const sentimentValue = sentiment ? `"${sentiment}"` : "null";
@@ -121,16 +145,21 @@ function appendVisita(existingMd: string, params: {
     md = md.replace(/^visite:/m, `voto_dedotto: ${votoValue}\nvisite:`);
   }
 
+  md = mergeRootFoto(md, foto_names);
+
   const piattiBlock = piatti_drink.length > 0
     ? `\n    piatti_drink_citati:\n      - ${piatti_drink.join("\n      - ")}`
     : `\n    piatti_drink_citati: []`;
+
+  const fotoVisitaBlock = foto_names.length > 0
+    ? `\n    foto:\n      - ${foto_names.join("\n      - ")}`
+    : `\n    foto: []`;
 
   const nuovaVisita = `  - data: "${data_visita}"
     sponsorizzato: ${sponsorizzato}
     note_reel: ${note_reel ? `"${note_reel.replace(/"/g, '\\"')}"` : "null"}
     caption: "${caption.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"${piattiBlock}
-    post_url: "${url_post.replace(/"/g, '\\"')}"
-    foto: []`;
+    post_url: "${url_post.replace(/"/g, '\\"')}"${fotoVisitaBlock}`;
 
   const visisteRe = /^visite:\s*$/m;
   if (visisteRe.test(md)) {
@@ -215,6 +244,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const lng = locale.lng !== undefined ? parseFloat(String(locale.lng)) : undefined;
 
       try {
+        const mdPath = `content/locali/${slug}.md`;
+
+        // STEP A2 — Verifica file MD esistente (offset foto + merge root)
+        let existingSha: string | null = null;
+        let existingContent: string | null = null;
+        try {
+          const existingFile = await gh(token, `/repos/${owner}/${repo}/contents/${mdPath}?ref=main`);
+          existingSha = existingFile.sha as string;
+          existingContent = b64Decode(existingFile.content as string).replace(/^﻿/, "");
+        } catch (e) {
+          if (!String((e as Error).message).includes("404")) throw e;
+        }
+        const existingFotoCount = existingContent ? getRootFoto(existingContent).length : 0;
+
         // STEP B — Blob foto su GitHub
         const fotoBlobShas: { path: string; sha: string }[] = [];
         const fotoNames: string[] = [];
@@ -226,7 +269,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               body: JSON.stringify({ content: base64string, encoding: "base64" }),
             });
             const blobSha = blobRes.sha as string;
-            const fotoName = `${slug}-${i + 1}.jpg`;
+            const fotoName = `${slug}-${existingFotoCount + i + 1}.jpg`;
             fotoBlobShas.push({
               path: `public/images/locali/${slug}/${fotoName}`,
               sha: blobSha,
@@ -243,13 +286,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // STEP D — Contenuto MD
         let contenutoMD: string;
-        const mdPath = `content/locali/${slug}.md`;
-
-        let existingSha: string | null = null;
-        try {
-          const existingFile = await gh(token, `/repos/${owner}/${repo}/contents/${mdPath}?ref=main`);
-          existingSha = existingFile.sha as string;
-          const existingContent = b64Decode(existingFile.content as string).replace(/^﻿/, "");
+        if (existingContent !== null) {
           contenutoMD = appendVisita(existingContent, {
             data_visita,
             sentiment: locale.sentiment,
@@ -261,8 +298,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             url_post,
             foto_names: fotoNames,
           });
-        } catch (e) {
-          if (!String((e as Error).message).includes("404")) throw e;
+        } else {
           contenutoMD = buildFrontmatter({
             nome,
             slug,
