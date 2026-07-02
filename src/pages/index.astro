@@ -153,7 +153,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
       bounds.extend(marker.getPosition());
 
       var infoWindow = new google.maps.InfoWindow({
-        content: '<div style="font-family:sans-serif"><strong>' + locale.nome + '</strong><br><a href="/locali/' + locale.slug + '">Vedi scheda</a></div>'
+        content: '<a href="/locali/' + locale.slug + '" style="font-family:sans-serif;font-weight:600;color:#1b3942;text-decoration:none">' + locale.nome + '</a>'
       });
 
       marker.addListener('click', function() {
