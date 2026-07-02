@@ -1,15 +1,18 @@
 ---
-nome: "Caffetteria Villa Necchi"
+nome: Caffetteria Villa Necchi
 slug: "caffetteria-villa-necchi"
-indirizzo: "Via Mozart, 10, 20122 Milano MI, Italia"
+voto_dedotto: 5
+sentiment: entusiasta
+citta: Milano
+indirizzo: Via Mozart, 10, 20122 Milano MI, Italia
 lat: 45.46794999999999
 lng: 9.2016872
-zona: "Palestro"
+zona: Palestro
 tipo:
   - cocktail-bar
   - bistrot
   - caffetteria
-fascia_prezzo: "€€€"
+fascia_prezzo: €€€
 instagram_url: "https://www.instagram.com/reel/DZm6FPftSBR/?igsh=aXZwOTIxODF3aHlm"
 foto:
   - caffetteria-villa-necchi-1.jpg
