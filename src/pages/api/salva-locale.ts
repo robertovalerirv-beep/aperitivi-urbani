@@ -60,6 +60,23 @@ function getRootFoto(md: string): string[] {
     .map((line) => line.replace(/^  - /, "").trim());
 }
 
+// Offset basato sul numero massimo realmente usato nei filename esistenti,
+// non sulla lunghezza dell'array — dopo una rimozione (via /admin/[slug]/),
+// array.length non corrisponde più al massimo indice usato, e riusarlo
+// causerebbe collisioni silenziose (sovrascrittura di foto ancora esistenti).
+function nextFotoOffset(existingNames: string[], slug: string): number {
+  let maxN = 0;
+  const re = new RegExp(`^${slug}-(\\d+)\\.[a-zA-Z0-9]+$`);
+  for (const name of existingNames) {
+    const m = name.match(re);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > maxN) maxN = n;
+    }
+  }
+  return maxN;
+}
+
 function mergeRootFoto(md: string, newNames: string[]): string {
   if (newNames.length === 0) return md;
   const existing = getRootFoto(md);
@@ -256,7 +273,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } catch (e) {
           if (!String((e as Error).message).includes("404")) throw e;
         }
-        const existingFotoCount = existingContent ? getRootFoto(existingContent).length : 0;
+        const existingFotoOffset = existingContent ? nextFotoOffset(getRootFoto(existingContent), slug) : 0;
 
         // STEP B — Blob foto su GitHub
         const fotoBlobShas: { path: string; sha: string }[] = [];
@@ -269,7 +286,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               body: JSON.stringify({ content: base64string, encoding: "base64" }),
             });
             const blobSha = blobRes.sha as string;
-            const fotoName = `${slug}-${existingFotoCount + i + 1}.jpg`;
+            const fotoName = `${slug}-${existingFotoOffset + i + 1}.jpg`;
             fotoBlobShas.push({
               path: `public/images/locali/${slug}/${fotoName}`,
               sha: blobSha,

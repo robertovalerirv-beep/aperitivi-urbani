@@ -25,6 +25,7 @@ const initial = {
   voto_dedotto: d.voto_dedotto ?? "",
   sponsorizzato: !!d.sponsorizzato,
   piatti_drink_citati: (d.piatti_drink_citati ?? []).join("\n"),
+  foto: d.foto ?? [],
 };
 ---
 
@@ -120,6 +121,17 @@ const initial = {
       <p id="submit-err" class="error" style="display:none"></p>
       <p id="submit-ok" class="ok" style="display:none"></p>
     </form>
+
+    <div class="field foto-section">
+      <span class="field-label">Foto</span>
+      <div id="foto-gallery" class="foto-gallery"></div>
+      <div style="margin-top:0.75rem">
+        <input id="foto-upload-input" type="file" accept="image/*" multiple />
+        <button id="foto-upload-btn" type="button" class="btn-primary" style="margin-top:0.5rem">Carica foto</button>
+      </div>
+      <p id="foto-err" class="error" style="display:none"></p>
+      <p id="foto-ok" class="ok" style="display:none"></p>
+    </div>
   </section>
 </Layout>
 
@@ -243,6 +255,122 @@ const initial = {
       submitBtn.textContent = "Salva modifiche";
     }
   });
+
+  // --- Gestione foto ---
+  let currentFoto = Array.isArray(initial.foto) ? initial.foto.slice() : [];
+  const fotoGallery = document.getElementById("foto-gallery");
+  const fotoUploadInput = document.getElementById("foto-upload-input");
+  const fotoUploadBtn = document.getElementById("foto-upload-btn");
+  const fotoErr = document.getElementById("foto-err");
+  const fotoOk = document.getElementById("foto-ok");
+
+  function renderFotoGallery() {
+    fotoGallery.innerHTML = "";
+    if (currentFoto.length === 0) {
+      fotoGallery.innerHTML = '<p class="foto-empty">Nessuna foto caricata.</p>';
+      return;
+    }
+    for (const f of currentFoto) {
+      const div = document.createElement("div");
+      div.className = "foto-thumb";
+      div.dataset.filename = f;
+      div.innerHTML = `
+        <img src="/images/locali/${slug}/${f}" alt="" />
+        <button type="button" class="foto-remove-btn" title="Rimuovi foto">×</button>
+      `;
+      div.querySelector(".foto-remove-btn").addEventListener("click", () => removeFoto(f, div));
+      fotoGallery.appendChild(div);
+    }
+  }
+
+  function resizeImage(file, maxPx) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxPx || h > maxPx) {
+            const ratio = Math.min(maxPx / w, maxPx / h);
+            w = Math.round(w * ratio);
+            h = Math.round(h * ratio);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+          resolve(dataUrl.split(",")[1]);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function removeFoto(filename, thumbEl) {
+    if (!confirm("Rimuovere questa foto? L'operazione non può essere annullata.")) return;
+    fotoErr.style.display = "none";
+    fotoOk.style.display = "none";
+    const pwd = sessionStorage.getItem(STORAGE_KEY);
+    if (!pwd) { showGate(); return; }
+    const removeBtn = thumbEl.querySelector(".foto-remove-btn");
+    removeBtn.disabled = true;
+    try {
+      const res = await fetch("/api/update-foto-locale", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: pwd, slug, remove: [filename] }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 401) { sessionStorage.removeItem(STORAGE_KEY); showGate(); return; }
+      if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      currentFoto = j.foto;
+      renderFotoGallery();
+      fotoOk.textContent = "Foto rimossa.";
+      fotoOk.style.display = "";
+    } catch (e) {
+      fotoErr.textContent = e.message;
+      fotoErr.style.display = "";
+      removeBtn.disabled = false;
+    }
+  }
+
+  fotoUploadBtn.addEventListener("click", async () => {
+    fotoErr.style.display = "none";
+    fotoOk.style.display = "none";
+    const files = Array.from(fotoUploadInput.files || []);
+    if (files.length === 0) { fotoErr.textContent = "Seleziona almeno un file."; fotoErr.style.display = ""; return; }
+    const pwd = sessionStorage.getItem(STORAGE_KEY);
+    if (!pwd) { showGate(); return; }
+    fotoUploadBtn.disabled = true;
+    fotoUploadBtn.textContent = "Caricamento…";
+    try {
+      const base64Photos = await Promise.all(files.map((f) => resizeImage(f, 1200)));
+      const res = await fetch("/api/update-foto-locale", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: pwd, slug, add: base64Photos }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 401) { sessionStorage.removeItem(STORAGE_KEY); showGate(); return; }
+      if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      currentFoto = j.foto;
+      renderFotoGallery();
+      fotoUploadInput.value = "";
+      fotoOk.textContent = "Foto caricate.";
+      fotoOk.style.display = "";
+    } catch (e) {
+      fotoErr.textContent = e.message;
+      fotoErr.style.display = "";
+    } finally {
+      fotoUploadBtn.disabled = false;
+      fotoUploadBtn.textContent = "Carica foto";
+    }
+  });
+
+  renderFotoGallery();
 </script>
 
 <style>
@@ -304,6 +432,29 @@ const initial = {
   }
   .ok a { color: #1e6432; font-weight: 600; text-decoration: underline; }
   code { background: rgba(0,0,0,0.06); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.9em; }
+
+  .foto-section { border-top: 1px solid var(--cream-border); padding-top: 1.25rem; margin-top: 0.5rem; }
+  .foto-gallery {
+    display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.5rem;
+    min-height: 90px;
+  }
+  .foto-thumb { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
+  .foto-thumb img {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 6px;
+    border: 1px solid var(--cream-border);
+  }
+  .foto-remove-btn {
+    position: absolute; top: -7px; right: -7px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--warn-bg); color: #8a2018;
+    border: 1px solid #e6c56b; cursor: pointer;
+    font-size: 0.9rem; line-height: 1; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .foto-remove-btn:hover { background: #ffe69c; }
+  .foto-remove-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .foto-empty { color: var(--muted); font-size: 0.9rem; }
+  input[type="file"] { width: 100%; padding: 0.5rem 0; font: inherit; color: var(--ink); }
 
   @media (max-width: 640px) {
     .admin-card { padding: 1.25rem; }
