@@ -16,6 +16,7 @@ fascia_prezzo: €€€
 instagram_url: "https://www.instagram.com/reel/DZm6FPftSBR/?igsh=aXZwOTIxODF3aHlm"
 foto:
   - caffetteria-villa-necchi-1.jpg
+  - caffetteria-villa-necchi-2.jpg
 sponsorizzato: false
 piatti_drink_citati: []
 visite:
