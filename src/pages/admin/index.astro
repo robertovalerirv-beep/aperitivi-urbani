@@ -19,9 +19,10 @@ locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
   <section id="lista" class="card admin-card" style="display:none">
     <h2 style="margin-top:0">Modifica locali</h2>
     <p class="muted">{locali.length} {locali.length === 1 ? "locale" : "locali"} in archivio. Clicca per modificare.</p>
+    <p id="delete-err" class="error" style="display:none"></p>
     <ul class="locale-list">
       {locali.map((l) => (
-        <li>
+        <li data-slug={l.data.slug}>
           <a href={`/admin/${l.data.slug}/`}>
             <strong>{l.data.nome}</strong>
             <span class="muted">
@@ -29,6 +30,7 @@ locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
               {l.data.indirizzo && <> · {l.data.indirizzo}</>}
             </span>
           </a>
+          <button type="button" class="btn-delete" data-slug={l.data.slug} data-nome={l.data.nome}>Elimina</button>
         </li>
       ))}
     </ul>
@@ -88,7 +90,13 @@ locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
     display: grid;
     gap: 0.5rem;
   }
+  .locale-list li {
+    display: flex;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
   .locale-list a {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -104,6 +112,22 @@ locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
     border-color: var(--teal);
   }
   .locale-list .muted { font-size: 0.85rem; }
+  .btn-delete {
+    flex-shrink: 0;
+    align-self: center;
+    background: var(--warn-bg);
+    color: #8a2018;
+    border: 1px solid #e6c56b;
+    border-radius: 6px;
+    padding: 0.5rem 0.9rem;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-delete:hover { background: #ffe69c; }
+  .btn-delete:disabled { opacity: 0.6; cursor: not-allowed; }
   .hint { font-size: 0.85rem; margin-top: 1.5rem; }
   code { background: rgba(0,0,0,0.05); padding: 0.1rem 0.35rem; border-radius: 3px; }
 </style>
@@ -154,5 +178,37 @@ locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
 
   gatePwd.addEventListener("keydown", (e) => {
     if (e.key === "Enter") gateBtn.click();
+  });
+
+  const deleteErr = document.getElementById("delete-err") as HTMLElement;
+
+  document.querySelectorAll<HTMLButtonElement>(".btn-delete").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const slug = btn.dataset.slug!;
+      const nome = btn.dataset.nome!;
+      if (!confirm(`Eliminare definitivamente "${nome}"? L'operazione non può essere annullata.`)) {
+        return;
+      }
+      deleteErr.style.display = "none";
+      btn.disabled = true;
+      try {
+        const pwd = sessionStorage.getItem(STORAGE_KEY) ?? "";
+        const res = await fetch("/api/delete-locale", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ password: pwd, slug }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok || !j.ok) {
+          throw new Error(j.error || `HTTP ${res.status}`);
+        }
+        const li = btn.closest("li")!;
+        li.remove();
+      } catch (e) {
+        deleteErr.textContent = `Errore eliminando "${nome}": ${(e as Error).message}`;
+        deleteErr.style.display = "";
+        btn.disabled = false;
+      }
+    });
   });
 </script>
