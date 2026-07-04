@@ -197,8 +197,14 @@ export const prerender = false;
           });
       })();
 
+      var mapsReady = false;
+      var pendingAutocomplete = [];
+
       window.initAutocomplete = function () {
-        attachAutocomplete(0);
+        mapsReady = true;
+        var toAttach = pendingAutocomplete;
+        pendingAutocomplete = [];
+        toAttach.forEach(function (index) { attachAutocomplete(index); });
       };
 
       function attachAutocomplete(index) {
@@ -237,8 +243,14 @@ export const prerender = false;
       }
 
       function attachAutocompleteToNew(index) {
-        setTimeout(function () { attachAutocomplete(index); }, 50);
+        if (mapsReady) {
+          attachAutocomplete(index);
+        } else {
+          pendingAutocomplete.push(index);
+        }
       }
+
+      attachAutocompleteToNew(0);
 
       function resizeImage(file, maxPx) {
         return new Promise(function (resolve) {
