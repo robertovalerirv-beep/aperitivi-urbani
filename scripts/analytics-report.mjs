@@ -54,7 +54,7 @@ const GRAPHQL_ENDPOINT = "https://api.cloudflare.com/client/v4/graphql";
 // Beacon token = siteTag per il filtro Web Analytics. Un token per dominio,
 // mai riusare quello di un altro sito (mischierebbe i dati di traffico).
 const SITES = [
-  { slug: "aperitivi-urbani", siteTag: "ca37c7dbbf7946a0aa8ceb541d1c93ae" },
+  { slug: "aperitivi-urbani", siteTag: "483a9a30282c4fdb95a8bfde2de693cb" },
   { slug: "cami-mangia-cose", siteTag: "590611f95ce745c6aef289a0cbe9fa56" },
 ];
 
