@@ -9,9 +9,11 @@ export async function getStaticPaths() {
 
 const { loc } = Astro.props;
 const d = loc.data;
+const allLocali = await getCollection("locali");
+const zoneList = [...new Set(allLocali.map((l) => l.data.zona).filter(Boolean))].sort() as string[];
 
 const TIPI = ["aperitivo","ristorante","cocktail-bar","wine-bar","bistrot","trattoria","pizzeria","caffetteria","altro"];
-const FASCE = ["€","€€","€€€","€€€€"];
+const FASCE = ["€","€€","€€€","€€€€","€€€€€"];
 const SENTIMENTS = ["entusiasta","positivo","neutro","tiepido","critico"];
 
 const initial = {
@@ -24,7 +26,7 @@ const initial = {
   sentiment: d.sentiment ?? "",
   voto_dedotto: d.voto_dedotto ?? "",
   sponsorizzato: !!d.sponsorizzato,
-  piatti_drink_citati: (d.piatti_drink_citati ?? []).join("\n"),
+  description: loc.body ?? "",
 };
 ---
 
@@ -50,10 +52,14 @@ const initial = {
         <input id="nome" type="text" required />
       </div>
 
+      <datalist id="zone-list">
+        {zoneList.map((z) => <option value={z} />)}
+      </datalist>
+
       <div class="field-row">
         <div class="field">
           <label for="zona">Zona</label>
-          <input id="zona" type="text" placeholder="Es. Loreto, NoLo, Navigli" />
+          <input id="zona" type="text" placeholder="Es. Loreto, NoLo, Navigli" list="zone-list" autocomplete="off" />
         </div>
         <div class="field">
           <label for="citta">Città</label>
@@ -111,9 +117,9 @@ const initial = {
       </div>
 
       <div class="field">
-        <label for="piatti_drink_citati">Piatti / drink citati</label>
-        <p class="hint">Uno per riga.</p>
-        <textarea id="piatti_drink_citati" rows="4"></textarea>
+        <label for="description">Descrizione</label>
+        <p class="hint">Testo libero in Markdown, visibile nella scheda pubblica.</p>
+        <textarea id="description" rows="6"></textarea>
       </div>
 
       <button id="submit-btn" type="submit" class="btn-primary submit">Salva modifiche</button>
@@ -155,7 +161,7 @@ const initial = {
   $("sentiment").value = initial.sentiment ?? "";
   $("voto_dedotto").value = initial.voto_dedotto === "" ? "" : String(initial.voto_dedotto);
   $("sponsorizzato").checked = !!initial.sponsorizzato;
-  $("piatti_drink_citati").value = initial.piatti_drink_citati ?? "";
+  $("description").value = initial.description ?? "";
 
   function showGate() { gate.style.display = ""; formWrap.style.display = "none"; }
   function showForm() { gate.style.display = "none"; formWrap.style.display = ""; }
@@ -207,8 +213,7 @@ const initial = {
       sentiment: $("sentiment").value,
       voto_dedotto: $("voto_dedotto").value,
       sponsorizzato: $("sponsorizzato").checked,
-      piatti_drink_citati: $("piatti_drink_citati").value
-        .split("\n").map((s) => s.trim()).filter((s) => s.length > 0),
+      description: $("description").value,
     };
 
     if (!fields.nome) { submitErr.textContent = "Il nome è obbligatorio."; submitErr.style.display = ""; return; }

@@ -39,7 +39,7 @@ const locali = defineCollection({
     indirizzo: z.string().nullable().optional(),
     citta: z.string().default("Milano"),
     tipo: z.array(tipoEnum).min(1),
-    fascia_prezzo: z.enum(["€", "€€", "€€€", "€€€€"]).nullable().optional(),
+    fascia_prezzo: z.enum(["€", "€€", "€€€", "€€€€", "€€€€€"]).nullable().optional(),
     piatti_drink_citati: z.array(z.string()).default([]),
     sentiment: sentimentEnum.nullable().optional(),
     voto_dedotto: z.number().min(1).max(5).nullable().optional(),

@@ -13,6 +13,12 @@ export async function getStaticPaths() {
 const { loc } = Astro.props;
 const { Content } = await render(loc);
 const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(a.data));
+
+function starsStr(v: number): string {
+  const full = Math.floor(v);
+  const half = v - full >= 0.5 ? 1 : 0;
+  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - half);
+}
 ---
 
 <Layout title={`${loc.data.nome} — Aperitivi Urbani`} description={`Recensione di ${loc.data.nome} a ${loc.data.zona ?? "Milano"}`}>
@@ -29,8 +35,7 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
 
     {loc.data.voto_dedotto != null && (
       <p class="stars" style="font-size:1.3rem;margin:0.5rem 0">
-        {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
-        {loc.data.sentiment && <span class="muted" style="font-weight:400;font-size:0.9rem;margin-left:0.5rem">— tono: {loc.data.sentiment}</span>}
+        {starsStr(loc.data.voto_dedotto)}
       </p>
     )}
 
@@ -38,15 +43,6 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
       <p style="background:var(--warn-bg);border-left:3px solid var(--accent);padding:0.6rem 1rem;font-size:0.9rem;border-radius:4px">
         Contenuto sponsorizzato / in collaborazione (come dichiarato nel post originale)
       </p>
-    )}
-
-    {loc.data.piatti_drink_citati.length > 0 && (
-      <section>
-        <h3>Citati nei post</h3>
-        <ul>
-          {loc.data.piatti_drink_citati.map((p) => <li>{p}</li>)}
-        </ul>
-      </section>
     )}
 
     <section>
@@ -60,7 +56,7 @@ const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(
           </p>
           {v.foto.length > 0 && (
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
-              {v.foto.map((f) => <img src={f} alt="" style="max-width:240px;border-radius:6px" />)}
+              {v.foto.map((f) => <img src={f} alt="" style="width:240px;max-width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;flex-shrink:0" />)}
             </div>
           )}
           <p style="white-space:pre-line">{v.caption}</p>
