@@ -7,10 +7,12 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "validate": "node scripts/validate-locali.mjs"
+    "validate": "node scripts/validate-locali.mjs",
+    "analytics": "node scripts/analytics-report.mjs"
   },
   "dependencies": {
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@astrojs/cloudflare": "^12.6.13",

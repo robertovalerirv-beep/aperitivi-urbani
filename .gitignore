@@ -9,3 +9,4 @@ dist/
 Thumbs.db
 *.log
 public/img/locali/_tmp/
+scripts/out/
