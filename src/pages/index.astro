@@ -25,6 +25,12 @@ const mapLocali = locali.map(l => ({
 })).filter(l => l.lat && l.lng);
 
 const mapLocaliJson = JSON.stringify(mapLocali);
+
+function starsStr(v: number): string {
+  const full = Math.floor(v);
+  const half = v - full >= 0.5 ? 1 : 0;
+  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - half);
+}
 ---
 
 <Layout title="Aperitivi Urbani — Locali recensiti a Milano" description="Le recensioni di locali milanesi di @aperitivi_urbani">
@@ -39,11 +45,15 @@ const mapLocaliJson = JSON.stringify(mapLocali);
 
   <section class="filters" aria-label="Filtri">
     <div class="filter-group">
-      <label for="f-zona">Zona</label>
-      <select id="f-zona">
-        <option value="">tutte</option>
-        {zone.map((z) => <option value={z}>{z}</option>)}
-      </select>
+      <span class="filter-label">Zona</span>
+      <div class="chip-group" role="group">
+        {zone.map((z) => (
+          <label class="chip">
+            <input type="checkbox" class="f-zona" value={z} />
+            <span>{z}</span>
+          </label>
+        ))}
+      </div>
     </div>
 
     <div class="filter-group">
@@ -88,6 +98,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
       return (
         <li
           class="card locale-card"
+          data-slug={loc.data.slug}
           data-zona={loc.data.zona ?? ""}
           data-tipi={loc.data.tipo.join(",")}
           data-fascia={loc.data.fascia_prezzo ?? ""}
@@ -102,7 +113,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
             </div>
             {loc.data.voto_dedotto != null && (
               <div class="stars" style="margin-top:0.5rem">
-                {"★".repeat(Math.round(loc.data.voto_dedotto))}{"☆".repeat(5 - Math.round(loc.data.voto_dedotto))}
+                {starsStr(loc.data.voto_dedotto)}
               </div>
             )}
             <div class="muted" style="font-size:0.85rem;margin-top:0.5rem">
@@ -161,6 +172,9 @@ const mapLocaliJson = JSON.stringify(mapLocali);
         },
       });
       bounds.extend(marker.getPosition());
+
+      window._markersBySlug = window._markersBySlug || {};
+      window._markersBySlug[locale.slug] = marker;
 
       var infoWindow = new google.maps.InfoWindow({
         content: '<a href="/locali/' + locale.slug + '" style="font-family:sans-serif;font-weight:600;color:#1b3942;text-decoration:none">' + locale.nome + '</a>'
@@ -291,7 +305,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
   const cards = Array.from(list.querySelectorAll<HTMLElement>(".locale-card"));
   const countEl = document.getElementById("count")!;
   const emptyEl = document.getElementById("empty-state")!;
-  const fZona = document.getElementById("f-zona") as HTMLSelectElement;
+  const fZona = Array.from(document.querySelectorAll<HTMLInputElement>(".f-zona"));
   const fTipo = Array.from(document.querySelectorAll<HTMLInputElement>(".f-tipo"));
   const fFascia = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="f-fascia"]'));
   const fSponsor = document.getElementById("f-sponsor") as HTMLInputElement | null;
@@ -299,7 +313,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
 
   function readState() {
     return {
-      zona: fZona.value,
+      zone: fZona.filter((c) => c.checked).map((c) => c.value),
       tipi: fTipo.filter((c) => c.checked).map((c) => c.value),
       fascia: (fFascia.find((r) => r.checked) || { value: "" }).value,
       sponsor: fSponsor ? fSponsor.checked : true,
@@ -308,7 +322,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
 
   function writeUrl(state: ReturnType<typeof readState>) {
     const p = new URLSearchParams();
-    if (state.zona) p.set("zona", state.zona);
+    if (state.zone.length) p.set("zone", state.zone.join(","));
     if (state.tipi.length) p.set("tipi", state.tipi.join(","));
     if (state.fascia) p.set("fascia", state.fascia);
     if (!state.sponsor) p.set("sponsor", "0");
@@ -318,7 +332,11 @@ const mapLocaliJson = JSON.stringify(mapLocali);
 
   function loadFromUrl() {
     const p = new URLSearchParams(window.location.search);
-    if (p.get("zona")) fZona.value = p.get("zona")!;
+    const zoneParam = p.get("zone");
+    if (zoneParam) {
+      const set = new Set(zoneParam.split(","));
+      fZona.forEach((c) => (c.checked = set.has(c.value)));
+    }
     const tipiParam = p.get("tipi");
     if (tipiParam) {
       const set = new Set(tipiParam.split(","));
@@ -341,7 +359,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
       const sponsor = card.dataset.sponsor === "1";
 
       const ok =
-        (!s.zona || s.zona === zona) &&
+        (s.zone.length === 0 || s.zone.includes(zona)) &&
         (s.tipi.length === 0 || s.tipi.every((t) => tipi.includes(t))) &&
         (!s.fascia || s.fascia === fascia) &&
         (s.sponsor || !sponsor);
@@ -352,14 +370,22 @@ const mapLocaliJson = JSON.stringify(mapLocali);
     countEl.textContent = String(visible);
     emptyEl.style.display = visible === 0 ? "" : "none";
     writeUrl(s);
+
+    const bySlug = (window as unknown as { _markersBySlug?: Record<string, { setVisible: (v: boolean) => void }> })._markersBySlug;
+    if (bySlug) {
+      for (const card of cards) {
+        const slug = card.dataset.slug ?? "";
+        bySlug[slug]?.setVisible(card.style.display !== "none");
+      }
+    }
   }
 
-  [fZona, ...fTipo, ...fFascia, ...(fSponsor ? [fSponsor] : [])].forEach((el) =>
+  [...fZona, ...fTipo, ...fFascia, ...(fSponsor ? [fSponsor] : [])].forEach((el) =>
     el.addEventListener("change", apply)
   );
 
   resetBtn.addEventListener("click", () => {
-    fZona.value = "";
+    fZona.forEach((c) => (c.checked = false));
     fTipo.forEach((c) => (c.checked = false));
     fFascia.forEach((r) => (r.checked = r.value === ""));
     if (fSponsor) fSponsor.checked = true;

@@ -22,13 +22,13 @@ const EDITABLE_SCALARS = [
   "voto_dedotto",
   "sponsorizzato",
 ];
-const EDITABLE_ARRAYS = ["tipo", "piatti_drink_citati"];
+const EDITABLE_ARRAYS = ["tipo"];
 
 const TIPO_ENUM = [
   "aperitivo", "ristorante", "cocktail-bar", "wine-bar",
   "bistrot", "trattoria", "pizzeria", "caffetteria", "altro",
 ];
-const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€"];
+const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€", "€€€€€"];
 const SENTIMENT_ENUM = ["entusiasta", "positivo", "neutro", "tiepido", "critico"];
 
 function jsonResponse(status, body) {
@@ -128,10 +128,8 @@ function normalizeFields(input) {
   if (Array.isArray(input.tipo)) {
     out.tipo = input.tipo.filter((t) => TIPO_ENUM.includes(t));
   }
-  if (Array.isArray(input.piatti_drink_citati)) {
-    out.piatti_drink_citati = input.piatti_drink_citati
-      .map((s) => String(s).trim())
-      .filter((s) => s.length > 0);
+  if ("description" in input) {
+    out.description = typeof input.description === "string" ? input.description : "";
   }
   return out;
 }
@@ -202,7 +200,7 @@ export default async (req) => {
     const m = decoded.replace(/^﻿/, "").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
     if (!m) throw new Error("Frontmatter non trovato nel file remoto.");
     let fm = m[1];
-    const tail = m[2];
+    const oldTail = m[2];
 
     // Apply scalar edits
     for (const k of EDITABLE_SCALARS) {
@@ -213,7 +211,10 @@ export default async (req) => {
       if (k in fields) fm = setArrayBlock(fm, k, fields[k]);
     }
 
-    const newContent = `---\n${fm}\n---\n${tail}`;
+    const newTail = typeof fields.description === "string"
+      ? (fields.description.trim() ? fields.description.trimEnd() + "\n" : "")
+      : oldTail;
+    const newContent = `---\n${fm}\n---\n${newTail}`;
     const newB64 = Buffer.from(newContent, "utf8").toString("base64");
 
     const commit = await gh(token, `/repos/${owner}/${repo}/contents/${filePath}`, {

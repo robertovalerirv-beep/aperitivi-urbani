@@ -46,7 +46,7 @@
       }
     },
     "fascia_prezzo": {
-      "enum": ["€", "€€", "€€€", "€€€€", null],
+      "enum": ["€", "€€", "€€€", "€€€€", "€€€€€", null],
       "description": "Dedotta dalla caption se citata esplicitamente o se ci sono prezzi indicativi. null altrimenti."
     },
     "piatti_drink_citati": {
