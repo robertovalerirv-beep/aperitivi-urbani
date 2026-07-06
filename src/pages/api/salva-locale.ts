@@ -273,7 +273,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } catch (e) {
           if (!String((e as Error).message).includes("404")) throw e;
         }
-        const existingFotoOffset = existingContent ? nextFotoOffset(getRootFoto(existingContent), slug) : 0;
+        let existingFotoOffset = existingContent ? nextFotoOffset(getRootFoto(existingContent), slug) : 0;
+
+        // STEP A3 — Orphan cleanup (solo per locale nuovo senza MD esistente).
+        // Scansiona la cartella immagini: se ci sono file orfani da un locale
+        // precedente con lo stesso slug, li eliminiamo atomicamente nel commit.
+        // L'offset viene aggiornato al massimo trovato su disco per garantire
+        // nomi sempre nuovi (evita collisioni di cache browser sulle stesse URL).
+        const orphanPaths: string[] = [];
+        if (existingContent === null) {
+          const imgDir = `public/images/locali/${slug}`;
+          try {
+            const dirContents = await gh(token, `/repos/${owner}/${repo}/contents/${imgDir}?ref=main`);
+            if (Array.isArray(dirContents)) {
+              const dirNames = (dirContents as Record<string, unknown>[])
+                .filter((f) => f.type === "file")
+                .map((f) => (f.path as string).split("/").pop() as string);
+              existingFotoOffset = nextFotoOffset(dirNames, slug);
+              for (const f of dirContents as Record<string, unknown>[]) {
+                if (f.type === "file") orphanPaths.push(f.path as string);
+              }
+            }
+          } catch (e) {
+            if (!String((e as Error).message).includes("404")) throw e;
+          }
+        }
 
         // STEP B — Blob foto su GitHub
         const fotoBlobShas: { path: string; sha: string }[] = [];
@@ -353,6 +377,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
             type: "blob",
             sha: blob.sha,
           });
+        }
+        // Elimina orfani (presenti su disco ma non nel nuovo locale)
+        for (const path of orphanPaths) {
+          treeItems.push({ path, mode: "100644", type: "blob", sha: null });
         }
 
         const newTreeData = await gh(token, `/repos/${owner}/${repo}/git/trees`, {

@@ -137,10 +137,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       currentFoto = currentFoto.filter((f) => !actuallyRemoved.includes(f));
     }
 
-    // Aggiunta — offset calcolato sull'array DOPO la rimozione, sul massimo reale
+    // Aggiunta — offset dal frontmatter PRIMA della rimozione: nomi eliminati
+    // in questa stessa chiamata non vengono mai riassegnati, evitando collisioni
+    // di cache browser. Il risultato del calcolo offset non entra mai in foto[]:
+    // foto[] deriva SEMPRE E SOLO da (frontmatter - rimossi + nuovi nomi).
     const newBlobs: { path: string; sha: string }[] = [];
     if (addPhotos.length > 0) {
-      const newNames = nextFotoNames(currentFoto, slug, addPhotos.length);
+      const newNames = nextFotoNames(originalFoto, slug, addPhotos.length);
       for (let i = 0; i < addPhotos.length; i++) {
         const blobRes = await gh(token, `/repos/${owner}/${repo}/git/blobs`, {
           method: "POST",
