@@ -121,12 +121,12 @@ export const prerender = false;
             </div>
 
             <div class="field">
-              <label for="data_visita">Data visita <span class="req">*</span></label>
+              <label for="data_visita">Data visita</label>
               <input id="data_visita" type="date" />
             </div>
 
             <div class="field">
-              <label for="caption">Caption <span class="req">*</span></label>
+              <label for="caption">Caption</label>
               <textarea id="caption" rows="8" placeholder="Incolla la caption integrale del post Instagram"></textarea>
             </div>
 
@@ -457,11 +457,7 @@ export const prerender = false;
         const caption = (document.getElementById('caption') as HTMLTextAreaElement).value.trim();
 
         if (!url_post) { err.textContent = 'URL post obbligatorio.'; err.style.display = ''; return; }
-        if (!caption) { err.textContent = 'Caption obbligatoria.'; err.style.display = ''; return; }
         const localiInput = getLocaliInput();
-        if (!localiInput.some((l) => l.indirizzo)) {
-          err.textContent = 'Almeno un indirizzo deve essere compilato.'; err.style.display = ''; return;
-        }
 
         goToStep(1);
         const loader = document.getElementById('step2-loader')!;

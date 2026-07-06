@@ -44,10 +44,10 @@ const locali = defineCollection({
   schema: z.object({
     slug: z.string(),
     nome: z.string(),
-    zona: z.string().nullable(),
+    zona: z.string().nullable().optional(),
     indirizzo: z.string().nullable().optional(),
     citta: z.string().default("Milano"),
-    tipo: z.array(tipoEnum).min(1),
+    tipo: z.array(tipoEnum).default([]),
     fascia_prezzo: z.enum(["€", "€€", "€€€", "€€€€", "€€€€€"]).nullable().optional(),
     piatti_drink_citati: z.array(z.string()).default([]),
     sentiment: sentimentEnum.nullable().optional(),

@@ -110,7 +110,7 @@ function buildFrontmatter(params: {
 
   const tipoBlock = tipo.length > 0
     ? `tipo:\n  - ${tipo.join("\n  - ")}`
-    : `tipo:\n  - altro`;
+    : `tipo: []`;
   const fotoBlock = foto_names.length > 0
     ? `foto:\n  - ${foto_names.join("\n  - ")}`
     : `foto: []`;
@@ -122,7 +122,7 @@ function buildFrontmatter(params: {
 nome: "${nome.replace(/"/g, '\\"')}"
 slug: "${slug}"
 indirizzo: "${indirizzo.replace(/"/g, '\\"')}"
-${lat !== undefined ? `lat: ${lat}\n` : ""}${lng !== undefined ? `lng: ${lng}\n` : ""}zona: "${zona.replace(/"/g, '\\"')}"
+${lat !== undefined ? `lat: ${lat}\n` : ""}${lng !== undefined ? `lng: ${lng}\n` : ""}zona: ${zona ? `"${zona.replace(/"/g, '\\"')}"` : "null"}
 ${tipoBlock}
 fascia_prezzo: ${fascia_prezzo ? `"${fascia_prezzo}"` : "null"}
 instagram_url: "${url_post.replace(/"/g, '\\"')}"
@@ -247,6 +247,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const { url_post, data_visita, caption, note_reel, locali } = body;
+    if (!url_post || typeof url_post !== "string" || !url_post.trim()) {
+      return jsonResponse(400, { error: "URL post Instagram obbligatorio" });
+    }
     if (!Array.isArray(locali) || locali.length === 0) {
       return jsonResponse(400, { error: "Nessun locale da salvare" });
     }

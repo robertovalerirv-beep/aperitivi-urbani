@@ -110,7 +110,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
               {loc.data.nome}
             </div>
             <div class="muted" style="font-size:0.9rem;margin-top:0.25rem">
-              {loc.data.zona ?? "Milano"} · {loc.data.tipo.join(", ")}
+              {loc.data.zona || "Milano"}{loc.data.tipo.length > 0 && <> · {loc.data.tipo.join(", ")}</>}
             </div>
             {loc.data.voto_dedotto != null && (
               <div class="stars" style="margin-top:0.5rem">

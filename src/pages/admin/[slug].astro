@@ -75,7 +75,7 @@ const initial = {
       </div>
 
       <div class="field">
-        <span class="field-label">Tipo <span class="req">*</span></span>
+        <span class="field-label">Tipo</span>
         <div class="chip-group">
           {TIPI.map((t) => (
             <label class="chip">
@@ -230,7 +230,6 @@ const initial = {
     };
 
     if (!fields.nome) { submitErr.textContent = "Il nome è obbligatorio."; submitErr.style.display = ""; return; }
-    if (tipi.length === 0) { submitErr.textContent = "Seleziona almeno un tipo."; submitErr.style.display = ""; return; }
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Salvataggio…";

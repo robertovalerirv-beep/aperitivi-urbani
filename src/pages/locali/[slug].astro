@@ -28,9 +28,9 @@ function starsStr(v: number): string {
   <article class="card scheda">
     <h2 style="margin:0 0 0.25rem">{loc.data.nome}</h2>
     <p class="muted" style="margin-top:0">
-      {loc.data.zona ?? "Milano"}
+      {loc.data.zona || "Milano"}
       {loc.data.indirizzo && <> · {loc.data.indirizzo}</>}
-      {" · "}{loc.data.tipo.join(", ")}
+      {loc.data.tipo.length > 0 && <> · {loc.data.tipo.join(", ")}</>}
       {loc.data.fascia_prezzo && <> · {loc.data.fascia_prezzo}</>}
     </p>
 

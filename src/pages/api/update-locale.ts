@@ -5,8 +5,8 @@ import type { APIRoute } from "astro";
 const EDITABLE_SCALARS = ["nome", "zona", "indirizzo", "citta", "fascia_prezzo", "sentiment", "voto_dedotto", "sponsorizzato"] as const;
 const EDITABLE_ARRAYS = ["tipo", "piatti_drink_citati"] as const;
 
-const TIPO_ENUM = ["aperitivo", "ristorante", "cocktail-bar", "wine-bar", "bistrot", "trattoria", "pizzeria", "caffetteria", "altro"];
-const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€"];
+const TIPO_ENUM = ["aperitivo", "ristorante", "cocktail-bar", "wine-bar", "bistrot", "trattoria", "pizzeria", "caffetteria", "sushi", "etnico", "orientale", "vegetariano", "pesce", "carne", "pasticceria", "locale-easy", "locale-raffinato", "altro"];
+const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€", "€€€€€"];
 const SENTIMENT_ENUM = ["entusiasta", "positivo", "neutro", "tiepido", "critico"];
 
 function jsonResponse(status: number, body: object) {
@@ -111,7 +111,6 @@ function normalizeFields(input: Record<string, unknown>) {
 function validateFields(f: Record<string, unknown>) {
   const errs: string[] = [];
   if (f.nome !== undefined && !f.nome) errs.push("nome non può essere vuoto");
-  if (Array.isArray(f.tipo) && (f.tipo as unknown[]).length === 0) errs.push("tipo deve contenere almeno un valore");
   if (f.fascia_prezzo !== undefined && f.fascia_prezzo !== null && !FASCIA_ENUM.includes(f.fascia_prezzo as string)) {
     errs.push(`fascia_prezzo invalida: ${f.fascia_prezzo}`);
   }
