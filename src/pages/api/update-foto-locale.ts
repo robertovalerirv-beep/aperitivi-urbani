@@ -136,10 +136,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const originalFoto = getRootFoto(existingContent);
     let currentFoto = [...originalFoto];
 
-    // Rimozione — solo nomi realmente presenti finiscono nel commit di eliminazione file
+    // Rimozione — un nome viene tolto da foto[] se è presente nel frontmatter.
     const actuallyRemoved = removeNames.filter((n) => originalFoto.includes(n));
     if (actuallyRemoved.length > 0) {
       currentFoto = currentFoto.filter((f) => !actuallyRemoved.includes(f));
+    }
+
+    // La cancellazione del FILE (tree item con sha:null) va emessa SOLO per i file
+    // che esistono davvero nel repo. Emettere un sha:null su un path non presente
+    // nel tree fa restituire alla Trees API un 422 GitRPC::BadObjectState
+    // PERSISTENTE (non il race transitorio GC/repack gestito dal retry sotto):
+    // il retry non può risolverlo e l'utente resta bloccato sull'errore generico.
+    // Se foto[] elenca un file assente, lo togliamo comunque dal frontmatter
+    // (self-healing) ma senza tentarne la delete fisica.
+    let filesToDelete: string[] = actuallyRemoved;
+    if (actuallyRemoved.length > 0) {
+      const existingImageNames = new Set<string>();
+      try {
+        const dirList = await gh(token, `/repos/${owner}/${repo}/contents/public/images/locali/${slug}?ref=main`);
+        if (Array.isArray(dirList)) {
+          for (const item of dirList as Array<Record<string, unknown>>) {
+            if (item?.type === "file" && typeof item.name === "string") {
+              existingImageNames.add(item.name as string);
+            }
+          }
+        }
+      } catch (e) {
+        // 404 = cartella immagini inesistente -> nessun file fisico da eliminare.
+        if (!String((e as Error).message).includes("404")) throw e;
+      }
+      filesToDelete = actuallyRemoved.filter((n) => existingImageNames.has(n));
     }
 
     // Aggiunta — offset dal frontmatter PRIMA della rimozione: nomi eliminati
@@ -170,7 +196,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     for (const blob of newBlobs) {
       treeItems.push({ path: blob.path, mode: "100644", type: "blob", sha: blob.sha });
     }
-    for (const name of actuallyRemoved) {
+    for (const name of filesToDelete) {
       treeItems.push({ path: `public/images/locali/${slug}/${name}`, mode: "100644", type: "blob", sha: null });
     }
 
