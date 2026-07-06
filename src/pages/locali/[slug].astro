@@ -53,7 +53,7 @@ function starsStr(v: number): string {
             id="gallery-hero-img"
             src={`/images/locali/${loc.data.slug}/${loc.data.foto[0]}`}
             alt={loc.data.nome}
-            style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block"
+            style="width:100%;aspect-ratio:4/3;object-fit:cover;object-position:center;border-radius:10px;display:block;image-rendering:auto"
           />
           {loc.data.foto.length > 1 && (
             <div id="gallery-counter" style="position:absolute;bottom:8px;right:8px;background:rgba(27,57,66,0.55);color:#fff;font-size:0.75rem;padding:0.15rem 0.6rem;border-radius:999px">
@@ -70,7 +70,7 @@ function starsStr(v: number): string {
                 data-full={`/images/locali/${loc.data.slug}/${f}`}
                 src={`/images/locali/${loc.data.slug}/${f}`}
                 alt=""
-                style={`width:56px;height:56px;object-fit:cover;border-radius:6px;cursor:pointer;flex:0 0 auto;border:2px solid ${i === 0 ? "var(--accent)" : "transparent"}`}
+                style={`width:56px;height:56px;object-fit:cover;object-position:center;border-radius:6px;cursor:pointer;flex:0 0 auto;border:2px solid ${i === 0 ? "var(--accent)" : "transparent"};image-rendering:auto`}
               />
             ))}
           </div>

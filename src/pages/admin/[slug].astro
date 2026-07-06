@@ -294,19 +294,39 @@ const initial = {
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          let w = img.width;
-          let h = img.height;
-          if (w > maxPx || h > maxPx) {
-            const ratio = Math.min(maxPx / w, maxPx / h);
-            w = Math.round(w * ratio);
-            h = Math.round(h * ratio);
+          const w = img.width;
+          const h = img.height;
+          if (w <= maxPx && h <= maxPx) {
+            const c = document.createElement("canvas");
+            c.width = w; c.height = h;
+            const cx = c.getContext("2d");
+            cx.imageSmoothingEnabled = true;
+            cx.imageSmoothingQuality = "high";
+            cx.drawImage(img, 0, 0, w, h);
+            resolve(c.toDataURL("image/jpeg", 0.88).split(",")[1]);
+            return;
+          }
+          const ratio = Math.min(maxPx / w, maxPx / h);
+          const tw = Math.round(w * ratio);
+          const th = Math.round(h * ratio);
+          let src = img, sw = w, sh = h;
+          while (Math.min(tw / sw, th / sh) < 0.5) {
+            const half = document.createElement("canvas");
+            half.width = Math.round(sw / 2);
+            half.height = Math.round(sh / 2);
+            const hx = half.getContext("2d");
+            hx.imageSmoothingEnabled = true;
+            hx.imageSmoothingQuality = "high";
+            hx.drawImage(src, 0, 0, half.width, half.height);
+            src = half; sw = half.width; sh = half.height;
           }
           const canvas = document.createElement("canvas");
-          canvas.width = w;
-          canvas.height = h;
-          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-          resolve(dataUrl.split(",")[1]);
+          canvas.width = tw; canvas.height = th;
+          const ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(src, 0, 0, tw, th);
+          resolve(canvas.toDataURL("image/jpeg", 0.88).split(",")[1]);
         };
         img.src = e.target.result;
       };
@@ -352,7 +372,7 @@ const initial = {
     fotoUploadBtn.disabled = true;
     fotoUploadBtn.textContent = "Caricamento…";
     try {
-      const base64Photos = await Promise.all(files.map((f) => resizeImage(f, 1200)));
+      const base64Photos = await Promise.all(files.map((f) => resizeImage(f, 1600)));
       const res = await fetch("/api/update-foto-locale", {
         method: "POST",
         headers: { "content-type": "application/json" },

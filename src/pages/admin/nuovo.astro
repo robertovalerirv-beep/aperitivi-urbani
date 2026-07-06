@@ -260,17 +260,37 @@ export const prerender = false;
             img.onload = function () {
               var w = img.width;
               var h = img.height;
-              if (w > maxPx || h > maxPx) {
-                var ratio = Math.min(maxPx / w, maxPx / h);
-                w = Math.round(w * ratio);
-                h = Math.round(h * ratio);
+              if (w <= maxPx && h <= maxPx) {
+                var c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                var cx = c.getContext('2d');
+                cx.imageSmoothingEnabled = true;
+                cx.imageSmoothingQuality = 'high';
+                cx.drawImage(img, 0, 0, w, h);
+                resolve(c.toDataURL('image/jpeg', 0.88).split(',')[1]);
+                return;
+              }
+              var ratio = Math.min(maxPx / w, maxPx / h);
+              var tw = Math.round(w * ratio);
+              var th = Math.round(h * ratio);
+              var src = img, sw = w, sh = h;
+              while (Math.min(tw / sw, th / sh) < 0.5) {
+                var half = document.createElement('canvas');
+                half.width = Math.round(sw / 2);
+                half.height = Math.round(sh / 2);
+                var hx = half.getContext('2d');
+                hx.imageSmoothingEnabled = true;
+                hx.imageSmoothingQuality = 'high';
+                hx.drawImage(src, 0, 0, half.width, half.height);
+                src = half; sw = half.width; sh = half.height;
               }
               var canvas = document.createElement('canvas');
-              canvas.width = w;
-              canvas.height = h;
-              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-              var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-              resolve(dataUrl.split(',')[1]);
+              canvas.width = tw; canvas.height = th;
+              var ctx = canvas.getContext('2d');
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(src, 0, 0, tw, th);
+              resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1]);
             };
             img.src = e.target.result;
           };
@@ -452,7 +472,7 @@ export const prerender = false;
         // Resize foto
         const localiWithFoto = await Promise.all(localiInput.map(async (l) => {
           const files = Array.from(l.fotoInput?.files ?? []);
-          const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1200)));
+          const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1600)));
           return { indirizzo: l.indirizzo, zona: l.zona, foto, lat: l.lat, lng: l.lng };
         }));
 
