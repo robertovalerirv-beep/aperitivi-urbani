@@ -70,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           messages: [
             {
               role: "user",
-              content: `Analizza questo testo di una recensione di locale milanese ed estrai le informazioni richieste.\n\nTesto:\n${testoPerAI}\n\nRestituisci un oggetto JSON con questi campi:\n- tipo: array di stringhe tra ["aperitivo","ristorante","cocktail-bar","wine-bar","bistrot","trattoria","pizzeria","caffetteria","altro"]\n- fascia_prezzo: stringa tra "€","€€","€€€","€€€€" oppure null\n- sentiment: stringa tra "entusiasta","positivo","neutro","tiepido","critico" oppure null\n- voto_dedotto: numero da 1 a 5 (passo 0.5) oppure null\n- sponsorizzato: boolean (true solo se ci sono segnali espliciti come #adv #ad #sponsored "in collaborazione con" gifting dichiarato)\n- piatti_drink_citati: array di stringhe con i piatti/drink menzionati`,
+              content: `Analizza questo testo di una recensione di locale milanese ed estrai le informazioni richieste.\n\nTesto:\n${testoPerAI}\n\nRestituisci un oggetto JSON con questi campi:\n- tipo: array di stringhe tra ["aperitivo","ristorante","cocktail-bar","wine-bar","bistrot","trattoria","pizzeria","caffetteria","altro"]\n- fascia_prezzo: stringa tra "€","€€","€€€","€€€€","€€€€€" oppure null\n- sentiment: stringa tra "entusiasta","positivo","neutro","tiepido","critico" oppure null\n- voto_dedotto: numero da 1 a 5 (passo 0.5) oppure null\n- sponsorizzato: boolean (true solo se ci sono segnali espliciti come #adv #ad #sponsored "in collaborazione con" gifting dichiarato)\n- piatti_drink_citati: array di stringhe con i piatti/drink menzionati`,
             },
           ],
         }),

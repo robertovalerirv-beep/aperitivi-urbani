@@ -45,6 +45,8 @@ function b64Encode(str: string): string {
   return btoa(unescape(encodeURIComponent(str)));
 }
 
+const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€", "€€€€€"] as const;
+
 function makeSlug(nome: string): string {
   return nome
     .toLowerCase()
@@ -265,6 +267,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
+      const fascia = locale.fascia_prezzo ?? null;
+      if (fascia !== null && !(FASCIA_ENUM as readonly string[]).includes(fascia)) {
+        results.push({ slug, success: false, commit_url: null, foto_salvate: 0, error: `Formato prezzo non valido: "${fascia}". Valori consentiti: ${FASCIA_ENUM.join(", ")}` });
+        continue;
+      }
+
       const lat = locale.lat !== undefined ? parseFloat(String(locale.lat)) : undefined;
       const lng = locale.lng !== undefined ? parseFloat(String(locale.lng)) : undefined;
 
@@ -354,7 +362,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             indirizzo: String(locale.indirizzo ?? ""),
             zona: String(locale.zona ?? ""),
             tipo: Array.isArray(locale.tipo) ? locale.tipo : [],
-            fascia_prezzo: locale.fascia_prezzo ?? null,
+            fascia_prezzo: fascia,
             url_post,
             foto_names: fotoNames,
             data_visita,
