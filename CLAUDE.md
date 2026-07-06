@@ -28,7 +28,10 @@ con consenso scritto dell'autrice a riutilizzare i contenuti dei post.
 
 ## Deploy
 - Frontend: **Astro** (statico), buildato in CI.
-- Continuous deployment su **Netlify** da branch `main`.
+- Continuous deployment su **Cloudflare Pages** da branch `main`
+  (progetto: `aperitivi-urbani`, URL: `https://aperitivi-urbani.pages.dev`).
+- Il file `netlify.toml` è conservato come fallback consultabile ma
+  **il deploy automatico su Netlify è disattivato** — unico target: CF Pages.
 - Nessun backend, nessuna chiamata LLM a runtime lato pubblico.
 - Claude gira **solo** in GitHub Actions, in fase di ingestion.
 
@@ -55,8 +58,29 @@ con consenso scritto dell'autrice a riutilizzare i contenuti dei post.
 ├── content/locali/<slug>.md
 ├── public/img/locali/<slug>/*.jpg
 ├── scripts/validate-locali.mjs
-├── src/                      # Astro (frontend, da implementare)
+├── src/                      # Astro (frontend)
 ├── astro.config.mjs
 ├── package.json
-└── netlify.toml
+└── netlify.toml              # conservato come fallback, non deploy attivo
 ```
+
+## Variabili d'ambiente su Cloudflare Pages (produzione)
+Configurate come **Secret** (Encrypted):
+- `ADMIN_PASSWORD` — accesso pannello admin
+- `ANTHROPIC_API_KEY` — enrichment AI in /admin/nuovo
+- `GITHUB_TOKEN_INTAKE` — creazione issue da form intake
+- `INTAKE_REPO_OWNER` — owner del repo GitHub
+- `INTAKE_REPO_NAME` — nome del repo GitHub
+- `INTAKE_PASSWORD` — password del form intake pubblico (**da aggiungere se mancante**)
+
+Configurate come **Plain text**:
+- `GOOGLE_MAPS_API_KEY` — embed mappa Google su schede locali e homepage
+
+Nota: il beacon Cloudflare Web Analytics è hardcoded in `src/layouts/Layout.astro`
+(token `483a9a30282c4fdb95a8bfde2de693cb`), non usa variabile d'ambiente.
+
+## Nota per nuovi siti creator
+Ogni nuovo sito creator si crea **direttamente su Cloudflare Pages** (skill
+`creator-site-clone`), mai su Netlify. Il sito aperitivi-urbani è il template
+di riferimento: stesso adapter `@astrojs/cloudflare`, stesso `output: "static"`,
+stessa struttura secrets su CF Pages.
