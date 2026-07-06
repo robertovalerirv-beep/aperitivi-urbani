@@ -16,6 +16,12 @@ const tipiDisponibili = [...new Set(locali.flatMap((l) => l.data.tipo))].sort();
 const fasceDisponibili = [...new Set(locali.map((l) => l.data.fascia_prezzo).filter(Boolean))].sort();
 const hasSponsor = locali.some((l) => l.data.sponsorizzato);
 
+function starsStr(v: number): string {
+  const full = Math.floor(v);
+  const half = v - full >= 0.5 ? 1 : 0;
+  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - half);
+}
+
 const mapLocali = locali.map(l => ({
   slug: l.data.slug,
   nome: l.data.nome,
@@ -25,12 +31,6 @@ const mapLocali = locali.map(l => ({
 })).filter(l => l.lat && l.lng);
 
 const mapLocaliJson = JSON.stringify(mapLocali);
-
-function starsStr(v: number): string {
-  const full = Math.floor(v);
-  const half = v - full >= 0.5 ? 1 : 0;
-  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - half);
-}
 ---
 
 <Layout title="Aperitivi Urbani — Locali recensiti a Milano" description="Le recensioni di locali milanesi di @aperitivi_urbani">
