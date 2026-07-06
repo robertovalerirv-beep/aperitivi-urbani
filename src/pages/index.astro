@@ -12,7 +12,8 @@ locali.sort((a, b) => {
 });
 
 const zone = [...new Set(locali.map((l) => l.data.zona).filter(Boolean))].sort();
-const tipiDisponibili = [...new Set(locali.flatMap((l) => l.data.tipo))].sort();
+const TIPI_TUTTI = ["aperitivo","ristorante","cocktail-bar","wine-bar","bistrot","trattoria","pizzeria","caffetteria","sushi","etnico","orientale","vegetariano","pesce","carne","pasticceria","locale-easy","locale-raffinato","altro"];
+const TIPO_LABEL: Record<string,string> = {"locale-easy":"Locale easy","locale-raffinato":"Locale raffinato"};
 const fasceDisponibili = [...new Set(locali.map((l) => l.data.fascia_prezzo).filter(Boolean))].sort();
 const hasSponsor = locali.some((l) => l.data.sponsorizzato);
 
@@ -59,10 +60,10 @@ const mapLocaliJson = JSON.stringify(mapLocali);
     <div class="filter-group">
       <span class="filter-label">Tipo</span>
       <div class="chip-group" role="group">
-        {tipiDisponibili.map((t) => (
+        {TIPI_TUTTI.map((t) => (
           <label class="chip">
             <input type="checkbox" class="f-tipo" value={t} />
-            <span>{t}</span>
+            <span>{TIPO_LABEL[t] ?? t}</span>
           </label>
         ))}
       </div>

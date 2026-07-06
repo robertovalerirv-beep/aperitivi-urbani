@@ -506,7 +506,8 @@ export const prerender = false;
 
         loader.style.display = 'none';
         const arric = enrichData.arricchimento as Record<string, unknown> ?? {};
-        const TIPI = ['aperitivo','ristorante','cocktail-bar','wine-bar','bistrot','trattoria','pizzeria','caffetteria','altro'];
+        const TIPI = ['aperitivo','ristorante','cocktail-bar','wine-bar','bistrot','trattoria','pizzeria','caffetteria','sushi','etnico','orientale','vegetariano','pesce','carne','pasticceria','locale-easy','locale-raffinato','altro'];
+        const TIPI_LABELS: Record<string,string> = {'locale-easy':'Locale easy','locale-raffinato':'Locale raffinato'};
         const FASCE = ['€','€€','€€€','€€€€'];
         const SENTIMENTS = ['entusiasta','positivo','neutro','tiepido','critico'];
 
@@ -521,7 +522,7 @@ export const prerender = false;
             <div class="field">
               <label>Tipo</label>
               <div class="chip-group">
-                ${TIPI.map((t) => `<label class="chip"><input type="checkbox" class="tipo-cb-${i}" value="${t}" ${(arric.tipo as string[] ?? []).includes(t) ? 'checked' : ''} /><span>${t}</span></label>`).join('')}
+                ${TIPI.map((t) => `<label class="chip"><input type="checkbox" class="tipo-cb-${i}" value="${t}" ${(arric.tipo as string[] ?? []).includes(t) ? 'checked' : ''} /><span>${TIPI_LABELS[t] || t}</span></label>`).join('')}
               </div>
             </div>
             <div class="field">

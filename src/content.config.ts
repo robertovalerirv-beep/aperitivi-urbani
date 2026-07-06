@@ -10,6 +10,15 @@ const tipoEnum = z.enum([
   "trattoria",
   "pizzeria",
   "caffetteria",
+  "sushi",
+  "etnico",
+  "orientale",
+  "vegetariano",
+  "pesce",
+  "carne",
+  "pasticceria",
+  "locale-easy",
+  "locale-raffinato",
   "altro",
 ]);
 
