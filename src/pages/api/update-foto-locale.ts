@@ -24,8 +24,13 @@ async function gh(token: string, urlPath: string, init: RequestInit = {}) {
   let body: unknown;
   try { body = text ? JSON.parse(text) : null; } catch { body = text; }
   if (!res.ok) {
-    const msg = (body as Record<string, string>)?.message || text || `HTTP ${res.status}`;
-    throw new Error(`GitHub API ${res.status} (${urlPath}): ${msg}`);
+    const b = body as Record<string, unknown>;
+    const msg = (b?.message as string) || text || `HTTP ${res.status}`;
+    const errArr = Array.isArray(b?.errors) ? (b.errors as Record<string, string>[]) : [];
+    const errMsgs = errArr.map((e) => e?.message || e?.code || "").filter(Boolean).join("; ");
+    const fullMsg = errMsgs ? `${msg} | errors: ${errMsgs}` : msg;
+    console.error(`[gh] ${res.status} ${urlPath} full_body:`, JSON.stringify(body));
+    throw new Error(`GitHub API ${res.status} (${urlPath}): ${fullMsg}`);
   }
   return body as Record<string, unknown>;
 }
@@ -158,12 +163,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const newContent = setRootFoto(existingContent, currentFoto);
 
-    // SHA HEAD e tree root
-    const refData = await gh(token, `/repos/${owner}/${repo}/git/ref/heads/main`);
-    const commitSha = (refData.object as Record<string, string>).sha;
-    const commitData = await gh(token, `/repos/${owner}/${repo}/git/commits/${commitSha}`);
-    const treeSha = (commitData.tree as Record<string, string>).sha;
-
+    // Pre-compila tree items una volta sola (invarianti tra i retry — solo base_tree cambia).
     const treeItems: Record<string, unknown>[] = [
       { path: mdPath, mode: "100644", type: "blob", content: newContent },
     ];
@@ -174,33 +174,66 @@ export const POST: APIRoute = async ({ request, locals }) => {
       treeItems.push({ path: `public/images/locali/${slug}/${name}`, mode: "100644", type: "blob", sha: null });
     }
 
-    const newTreeData = await gh(token, `/repos/${owner}/${repo}/git/trees`, {
-      method: "POST",
-      body: JSON.stringify({ base_tree: treeSha, tree: treeItems }),
-    });
-    const newTreeSha = newTreeData.sha as string;
+    // Retry loop: il Trees API può restituire 422/BadObjectState dopo un ciclo
+    // cancella-poi-ricrea mentre GitHub riorganizza internamente gli oggetti git
+    // (GC/repack). Ad ogni tentativo si rilegge il ref per avere un base_tree
+    // fresco. Max 2 retry (3 tentativi totali).
+    let lastGitError: Error | null = null;
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      try {
+        const refData = await gh(token, `/repos/${owner}/${repo}/git/ref/heads/main`);
+        const commitSha = (refData.object as Record<string, string>).sha;
+        const commitData = await gh(token, `/repos/${owner}/${repo}/git/commits/${commitSha}`);
+        const treeSha = (commitData.tree as Record<string, string>).sha;
 
-    const newCommitData = await gh(token, `/repos/${owner}/${repo}/git/commits`, {
-      method: "POST",
-      body: JSON.stringify({
-        message: `admin: aggiorna foto ${slug}`,
-        tree: newTreeSha,
-        parents: [commitSha],
-      }),
-    });
-    const newCommitSha = newCommitData.sha as string;
+        const newTreeData = await gh(token, `/repos/${owner}/${repo}/git/trees`, {
+          method: "POST",
+          body: JSON.stringify({ base_tree: treeSha, tree: treeItems }),
+        });
+        const newTreeSha = newTreeData.sha as string;
 
-    await gh(token, `/repos/${owner}/${repo}/git/refs/heads/main`, {
-      method: "PATCH",
-      body: JSON.stringify({ sha: newCommitSha, force: false }),
-    });
+        const newCommitData = await gh(token, `/repos/${owner}/${repo}/git/commits`, {
+          method: "POST",
+          body: JSON.stringify({
+            message: `admin: aggiorna foto ${slug}`,
+            tree: newTreeSha,
+            parents: [commitSha],
+          }),
+        });
+        const newCommitSha = newCommitData.sha as string;
 
-    return jsonResponse(200, {
-      ok: true,
-      commit_url: `https://github.com/${owner}/${repo}/commit/${newCommitSha}`,
-      foto: currentFoto,
-    });
+        await gh(token, `/repos/${owner}/${repo}/git/refs/heads/main`, {
+          method: "PATCH",
+          body: JSON.stringify({ sha: newCommitSha, force: false }),
+        });
+
+        return jsonResponse(200, {
+          ok: true,
+          commit_url: `https://github.com/${owner}/${repo}/commit/${newCommitSha}`,
+          foto: currentFoto,
+        });
+      } catch (e) {
+        const msg = (e as Error).message;
+        const isBadObjectState = msg.includes("BadObjectState") ||
+          (msg.includes("422") && msg.includes("/git/trees"));
+        if (attempt < 2 && isBadObjectState) {
+          lastGitError = e as Error;
+          await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+          continue;
+        }
+        throw e;
+      }
+    }
+    throw lastGitError ?? new Error("Tree creation failed after retries");
   } catch (e) {
-    return jsonResponse(500, { error: (e as Error).message });
+    const msg = (e as Error).message;
+    console.error("[update-foto-locale] error:", msg);
+    const isBadObjectState = msg.includes("BadObjectState") ||
+      (msg.includes("422") && msg.includes("/git/trees"));
+    return jsonResponse(500, {
+      error: isBadObjectState
+        ? "Errore temporaneo durante il salvataggio. Riprova tra qualche secondo."
+        : "Errore durante l'aggiornamento delle foto.",
+    });
   }
 };

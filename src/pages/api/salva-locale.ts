@@ -24,8 +24,13 @@ async function gh(token: string, urlPath: string, init: RequestInit = {}) {
   let body: unknown;
   try { body = text ? JSON.parse(text) : null; } catch { body = text; }
   if (!res.ok) {
-    const msg = (body as Record<string, string>)?.message || text || `HTTP ${res.status}`;
-    throw new Error(`GitHub API ${res.status} (${urlPath}): ${msg}`);
+    const b = body as Record<string, unknown>;
+    const msg = (b?.message as string) || text || `HTTP ${res.status}`;
+    const errArr = Array.isArray(b?.errors) ? (b.errors as Record<string, string>[]) : [];
+    const errMsgs = errArr.map((e) => e?.message || e?.code || "").filter(Boolean).join("; ");
+    const fullMsg = errMsgs ? `${msg} | errors: ${errMsgs}` : msg;
+    console.error(`[gh] ${res.status} ${urlPath} full_body:`, JSON.stringify(body));
+    throw new Error(`GitHub API ${res.status} (${urlPath}): ${fullMsg}`);
   }
   return body as Record<string, unknown>;
 }
@@ -280,11 +285,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // precedente con lo stesso slug, li eliminiamo atomicamente nel commit.
         // L'offset viene aggiornato al massimo trovato su disco per garantire
         // nomi sempre nuovi (evita collisioni di cache browser sulle stesse URL).
+        // Usiamo il SHA esatto del commit corrente (non il label "main") per evitare
+        // che dati stale dalla Contents API includano sha:null per path inesistenti
+        // nel base_tree — ciò causerebbe GitRPC::BadObjectState sulle operazioni
+        // successive che usano quel tree come base.
         const orphanPaths: string[] = [];
         if (existingContent === null) {
+          const earlyRefData = await gh(token, `/repos/${owner}/${repo}/git/ref/heads/main`);
+          const earlyCommitSha = (earlyRefData.object as Record<string, string>).sha;
           const imgDir = `public/images/locali/${slug}`;
           try {
-            const dirContents = await gh(token, `/repos/${owner}/${repo}/contents/${imgDir}?ref=main`);
+            const dirContents = await gh(token, `/repos/${owner}/${repo}/contents/${imgDir}?ref=${earlyCommitSha}`);
             if (Array.isArray(dirContents)) {
               const dirNames = (dirContents as Record<string, unknown>[])
                 .filter((f) => f.type === "file")
@@ -318,12 +329,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             fotoNames.push(fotoName);
           }
         }
-
-        // STEP C — SHA HEAD e tree root
-        const refData = await gh(token, `/repos/${owner}/${repo}/git/ref/heads/main`);
-        const commitSha = (refData.object as Record<string, string>).sha;
-        const commitData = await gh(token, `/repos/${owner}/${repo}/git/commits/${commitSha}`);
-        const treeSha = (commitData.tree as Record<string, string>).sha;
 
         // STEP D — Contenuto MD
         let contenutoMD: string;
@@ -361,53 +366,71 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
         }
 
-        // STEP E — Commit Trees API
+        // STEP E — Commit Trees API con retry per 422/BadObjectState.
+        // Gli items del tree sono invarianti tra i retry (blob già creati, orphan
+        // verificati); solo il base_tree SHA viene riletto a ogni tentativo.
         const treeItems: Record<string, unknown>[] = [
-          {
-            path: mdPath,
-            mode: "100644",
-            type: "blob",
-            content: contenutoMD,
-          },
+          { path: mdPath, mode: "100644", type: "blob", content: contenutoMD },
         ];
         for (const blob of fotoBlobShas) {
-          treeItems.push({
-            path: blob.path,
-            mode: "100644",
-            type: "blob",
-            sha: blob.sha,
-          });
+          treeItems.push({ path: blob.path, mode: "100644", type: "blob", sha: blob.sha });
         }
-        // Elimina orfani (presenti su disco ma non nel nuovo locale)
         for (const path of orphanPaths) {
           treeItems.push({ path, mode: "100644", type: "blob", sha: null });
         }
 
-        const newTreeData = await gh(token, `/repos/${owner}/${repo}/git/trees`, {
-          method: "POST",
-          body: JSON.stringify({ base_tree: treeSha, tree: treeItems }),
-        });
-        const newTreeSha = newTreeData.sha as string;
+        let lastGitError: Error | null = null;
+        let commitUrl = "";
+        for (let attempt = 0; attempt <= 2; attempt++) {
+          try {
+            // STEP C — SHA HEAD e tree root (riletto a ogni tentativo)
+            const refData = await gh(token, `/repos/${owner}/${repo}/git/ref/heads/main`);
+            const commitSha = (refData.object as Record<string, string>).sha;
+            const commitData = await gh(token, `/repos/${owner}/${repo}/git/commits/${commitSha}`);
+            const treeSha = (commitData.tree as Record<string, string>).sha;
 
-        const newCommitData = await gh(token, `/repos/${owner}/${repo}/git/commits`, {
-          method: "POST",
-          body: JSON.stringify({
-            message: `admin: add ${slug} [skip ci]`,
-            tree: newTreeSha,
-            parents: [commitSha],
-          }),
-        });
-        const newCommitSha = newCommitData.sha as string;
+            const newTreeData = await gh(token, `/repos/${owner}/${repo}/git/trees`, {
+              method: "POST",
+              body: JSON.stringify({ base_tree: treeSha, tree: treeItems }),
+            });
+            const newTreeSha = newTreeData.sha as string;
 
-        await gh(token, `/repos/${owner}/${repo}/git/refs/heads/main`, {
-          method: "PATCH",
-          body: JSON.stringify({ sha: newCommitSha, force: false }),
-        });
+            const newCommitData = await gh(token, `/repos/${owner}/${repo}/git/commits`, {
+              method: "POST",
+              body: JSON.stringify({
+                message: `admin: add ${slug} [skip ci]`,
+                tree: newTreeSha,
+                parents: [commitSha],
+              }),
+            });
+            const newCommitSha = newCommitData.sha as string;
+
+            await gh(token, `/repos/${owner}/${repo}/git/refs/heads/main`, {
+              method: "PATCH",
+              body: JSON.stringify({ sha: newCommitSha, force: false }),
+            });
+
+            commitUrl = `https://github.com/${owner}/${repo}/commit/${newCommitSha}`;
+            lastGitError = null;
+            break;
+          } catch (e) {
+            const msg = (e as Error).message;
+            const isBadObjectState = msg.includes("BadObjectState") ||
+              (msg.includes("422") && msg.includes("/git/trees"));
+            if (attempt < 2 && isBadObjectState) {
+              lastGitError = e as Error;
+              await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+              continue;
+            }
+            throw e;
+          }
+        }
+        if (lastGitError) throw lastGitError;
 
         results.push({
           slug,
           success: true,
-          commit_url: `https://github.com/${owner}/${repo}/commit/${newCommitSha}`,
+          commit_url: commitUrl,
           foto_salvate: fotoBlobShas.length,
         });
       } catch (e) {
