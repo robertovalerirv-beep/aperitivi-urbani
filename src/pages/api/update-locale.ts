@@ -101,8 +101,7 @@ function normalizeFields(input: Record<string, unknown>) {
     out.tipo = (input.tipo as string[]).filter((t) => TIPO_ENUM.includes(t));
   }
   if ("description" in input) {
-    // Body vuoto è legittimo: nessuna validazione bloccante.
-    out.description = String(input.description ?? "");
+    out.description = typeof input.description === "string" ? input.description : "";
   }
   if ("caption" in input) {
     // Solo trim ai bordi: gli a-capo interni restano e vengono escapati in scrittura.
