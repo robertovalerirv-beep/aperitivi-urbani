@@ -33,3 +33,6 @@ visite:
     post_url: "https://www.instagram.com/p/DZXN3u6DQfI/?img_index=7&igsh=bnhxam9yYzRsZGNv"
     foto: []
 ---
+
+
+Questo e' un test E2E (FIX 3): le righe vuote iniziali devono restare.
