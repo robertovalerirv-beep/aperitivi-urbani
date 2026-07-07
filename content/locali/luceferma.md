@@ -33,4 +33,3 @@ visite:
     post_url: "https://www.instagram.com/p/DZXN3u6DQfI/?img_index=7&igsh=bnhxam9yYzRsZGNv"
     foto: []
 ---
-Paragrafo di test E2E salvataggio descrizione da admin (sessione 2026-07-07). Da rimuovere con commit di ripristino.
