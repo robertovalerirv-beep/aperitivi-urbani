@@ -104,10 +104,10 @@ function buildFrontmatter(params: {
   tipo: string[]; fascia_prezzo: string | null; url_post: string;
   foto_names: string[]; data_visita: string; sentiment: string | null;
   voto: number | null; sponsorizzato: boolean; note_reel: string | null;
-  caption: string; piatti_drink: string[]; lat?: number; lng?: number;
+  caption: string; lat?: number; lng?: number;
 }): string {
   const { nome, slug, indirizzo, zona, tipo, fascia_prezzo, url_post, foto_names,
-    data_visita, sentiment, voto, sponsorizzato, note_reel, caption, piatti_drink,
+    data_visita, sentiment, voto, sponsorizzato, note_reel, caption,
     lat, lng } = params;
 
   const tipoBlock = tipo.length > 0
@@ -116,9 +116,6 @@ function buildFrontmatter(params: {
   const fotoBlock = foto_names.length > 0
     ? `foto:\n  - ${foto_names.join("\n  - ")}`
     : `foto: []`;
-  const piattiBlock = piatti_drink.length > 0
-    ? `piatti_drink_citati:\n  - ${piatti_drink.join("\n  - ")}`
-    : `piatti_drink_citati: []`;
 
   return `---
 nome: "${nome.replace(/"/g, '\\"')}"
@@ -130,7 +127,6 @@ fascia_prezzo: ${fascia_prezzo ? `"${fascia_prezzo}"` : "null"}
 instagram_url: "${url_post.replace(/"/g, '\\"')}"
 ${fotoBlock}
 sponsorizzato: ${sponsorizzato}
-${piattiBlock}
 sentiment: ${sentiment ? `"${sentiment}"` : "null"}
 voto_dedotto: ${voto !== null ? voto : "null"}
 visite:
@@ -147,9 +143,9 @@ visite:
 function appendVisita(existingMd: string, params: {
   data_visita: string; sentiment: string | null; voto: number | null;
   sponsorizzato: boolean; note_reel: string | null; caption: string;
-  piatti_drink: string[]; url_post: string; foto_names: string[];
+  url_post: string; foto_names: string[];
 }): string {
-  const { data_visita, sentiment, voto, sponsorizzato, note_reel, caption, piatti_drink, url_post, foto_names } = params;
+  const { data_visita, sentiment, voto, sponsorizzato, note_reel, caption, url_post, foto_names } = params;
 
   let md = existingMd;
   const sentimentValue = sentiment ? `"${sentiment}"` : "null";
@@ -171,10 +167,6 @@ function appendVisita(existingMd: string, params: {
 
   md = mergeRootFoto(md, foto_names);
 
-  const piattiBlock = piatti_drink.length > 0
-    ? `\n    piatti_drink_citati:\n      - ${piatti_drink.join("\n      - ")}`
-    : `\n    piatti_drink_citati: []`;
-
   const fotoVisitaBlock = foto_names.length > 0
     ? `\n    foto:\n      - ${foto_names.join("\n      - ")}`
     : `\n    foto: []`;
@@ -182,7 +174,7 @@ function appendVisita(existingMd: string, params: {
   const nuovaVisita = `  - data: "${data_visita}"
     sponsorizzato: ${sponsorizzato}
     note_reel: ${note_reel ? `"${note_reel.replace(/"/g, '\\"')}"` : "null"}
-    caption: "${caption.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"${piattiBlock}
+    caption: "${caption.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"
     post_url: "${url_post.replace(/"/g, '\\"')}"${fotoVisitaBlock}`;
 
   const visisteRe = /^visite:\s*$/m;
@@ -207,7 +199,6 @@ interface LocaleInput {
   sentiment: string | null;
   voto_dedotto: number | null;
   sponsorizzato: boolean;
-  piatti_drink_citati: string[];
   foto: string[];
   lat?: number;
   lng?: number;
@@ -351,7 +342,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             sponsorizzato: Boolean(locale.sponsorizzato),
             note_reel: note_reel ?? null,
             caption,
-            piatti_drink: locale.piatti_drink_citati ?? [],
             url_post,
             foto_names: fotoNames,
           });
@@ -371,7 +361,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             sponsorizzato: Boolean(locale.sponsorizzato),
             note_reel: note_reel ?? null,
             caption,
-            piatti_drink: locale.piatti_drink_citati ?? [],
             lat: Number.isFinite(lat) ? lat : undefined,
             lng: Number.isFinite(lng) ? lng : undefined,
           });

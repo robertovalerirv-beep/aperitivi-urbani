@@ -3,7 +3,7 @@ export const prerender = false;
 import type { APIRoute } from "astro";
 
 const EDITABLE_SCALARS = ["nome", "zona", "indirizzo", "citta", "fascia_prezzo", "sentiment", "voto_dedotto", "sponsorizzato"] as const;
-const EDITABLE_ARRAYS = ["tipo", "piatti_drink_citati"] as const;
+const EDITABLE_ARRAYS = ["tipo"] as const;
 
 const TIPO_ENUM = ["aperitivo", "ristorante", "cocktail-bar", "wine-bar", "bistrot", "trattoria", "pizzeria", "caffetteria", "sushi", "etnico", "orientale", "vegetariano", "pesce", "carne", "pasticceria", "locale-easy", "locale-raffinato", "altro"];
 const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€", "€€€€€"];
@@ -99,11 +99,6 @@ function normalizeFields(input: Record<string, unknown>) {
   if ("sponsorizzato" in input) out.sponsorizzato = Boolean(input.sponsorizzato);
   if (Array.isArray(input.tipo)) {
     out.tipo = (input.tipo as string[]).filter((t) => TIPO_ENUM.includes(t));
-  }
-  if (Array.isArray(input.piatti_drink_citati)) {
-    out.piatti_drink_citati = (input.piatti_drink_citati as string[])
-      .map((s) => String(s).trim())
-      .filter((s) => s.length > 0);
   }
   if ("description" in input) {
     // Body vuoto è legittimo: nessuna validazione bloccante.
