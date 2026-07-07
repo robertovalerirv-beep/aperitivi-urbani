@@ -29,6 +29,7 @@ const initial = {
   sponsorizzato: !!d.sponsorizzato,
   foto: d.foto ?? [],
   description: loc.body ?? "",
+  caption: d.visite?.[0]?.caption ?? "",
 };
 ---
 
@@ -124,6 +125,12 @@ const initial = {
         <textarea id="description" rows="6"></textarea>
       </div>
 
+      <div class="field">
+        <label for="caption">Caption post originale</label>
+        <p class="hint">Testo scritto in fase di inserimento — modificalo se serve correggerlo.</p>
+        <textarea id="caption" rows="9"></textarea>
+      </div>
+
       <button id="submit-btn" type="submit" class="btn-primary submit">Salva modifiche</button>
       <p id="submit-err" class="error" style="display:none"></p>
       <p id="submit-ok" class="ok" style="display:none"></p>
@@ -175,6 +182,7 @@ const initial = {
   $("voto_dedotto").value = initial.voto_dedotto === "" ? "" : String(initial.voto_dedotto);
   $("sponsorizzato").checked = !!initial.sponsorizzato;
   $("description").value = initial.description ?? "";
+  $("caption").value = initial.caption ?? "";
 
   function showGate() { gate.style.display = ""; formWrap.style.display = "none"; }
   function showForm() { gate.style.display = "none"; formWrap.style.display = ""; }
@@ -227,6 +235,7 @@ const initial = {
       voto_dedotto: $("voto_dedotto").value,
       sponsorizzato: $("sponsorizzato").checked,
       description: $("description").value,
+      caption: $("caption").value,
     };
 
     if (!fields.nome) { submitErr.textContent = "Il nome è obbligatorio."; submitErr.style.display = ""; return; }

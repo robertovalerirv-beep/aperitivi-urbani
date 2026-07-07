@@ -105,6 +105,10 @@ function normalizeFields(input: Record<string, unknown>) {
       .map((s) => String(s).trim())
       .filter((s) => s.length > 0);
   }
+  if ("caption" in input) {
+    // Solo trim ai bordi: gli a-capo interni restano e vengono escapati in scrittura.
+    out.caption = String(input.caption ?? "").trim();
+  }
   return out;
 }
 
@@ -120,6 +124,9 @@ function validateFields(f: Record<string, unknown>) {
   if (f.voto_dedotto !== undefined && f.voto_dedotto !== null) {
     const v = f.voto_dedotto as number;
     if (!(Number.isFinite(v) && v >= 1 && v <= 5)) errs.push("voto_dedotto fuori range 1-5");
+  }
+  if (f.caption !== undefined && !String(f.caption).trim()) {
+    errs.push("la caption non può essere vuota");
   }
   return errs;
 }
@@ -186,6 +193,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     for (const k of EDITABLE_ARRAYS) {
       if (k in fields) fm = setArrayBlock(fm, k, fields[k] as unknown[]);
+    }
+
+    if ("caption" in fields) {
+      // Sostituisce SOLO la prima riga caption: (visite[0], la più recente —
+      // appendVisita inserisce le nuove visite in testa). Stesso escaping di
+      // salva-locale.ts: virgolette e a-capo escapati in stringa single-line.
+      const captionRe = /^([ \t]*caption:)[ \t]*".*"[ \t]*$/m;
+      if (!captionRe.test(fm)) {
+        throw new Error("Riga caption non trovata nel frontmatter: impossibile aggiornare la caption.");
+      }
+      const escaped = String(fields.caption).replace(/"/g, '\\"').replace(/\n/g, "\\n");
+      fm = fm.replace(captionRe, (_full, prefix) => `${prefix} "${escaped}"`);
     }
 
     const newContent = `---\n${fm}\n---\n${tail}`;
