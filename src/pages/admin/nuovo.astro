@@ -1,5 +1,8 @@
 ---
 export const prerender = false;
+import { getCollection } from "astro:content";
+const _locali = await getCollection("locali");
+const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].sort();
 ---
 
 <!doctype html>
@@ -63,6 +66,10 @@ export const prerender = false;
       .toggle-label input { width: auto; min-height: 0; }
       .foto-preview { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
       .foto-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(58,143,160,0.3); }
+      .foto-preview-item { position: relative; display: inline-block; }
+      .foto-preview-item img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(58,143,160,0.3); display: block; }
+      .btn-remove-foto-step1 { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: rgba(200,50,50,0.9); color: #fff; border: none; cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; }
+      .btn-remove-foto-step1:hover { background: rgba(200,50,50,1); }
       .step { display: none; }
       .step.active { display: block; }
       .step-indicator { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
@@ -81,6 +88,10 @@ export const prerender = false;
     </style>
   </head>
   <body>
+    <datalist id="zone-list">
+      {zoneList.map((z) => <option value={z} />)}
+    </datalist>
+
     <div style="max-width:760px;margin:0 auto">
       <p style="margin-bottom:0.5rem"><a href="/admin/" style="color:#3A8FA0">← lista locali</a></p>
       <h1 style="margin-top:0.5rem">Nuovo locale</h1>
@@ -146,11 +157,12 @@ export const prerender = false;
                 </div>
                 <div class="field">
                   <label for="zona-0">Zona</label>
-                  <input id="zona-0" type="text" placeholder="Es. Navigli, NoLo, Isola" />
+                  <input id="zona-0" type="text" placeholder="Es. Navigli, NoLo, Isola" list="zone-list" autocomplete="off" />
                 </div>
                 <div class="field">
                   <label>Foto</label>
                   <input id="foto-0" type="file" accept="image/*" multiple />
+                  <div id="preview-foto-0" class="foto-preview"></div>
                 </div>
               </div>
             </div>
@@ -374,15 +386,21 @@ export const prerender = false;
           </div>
           <div class="field">
             <label for="zona-${idx}">Zona</label>
-            <input id="zona-${idx}" type="text" placeholder="Es. Navigli, NoLo" />
+            <input id="zona-${idx}" type="text" placeholder="Es. Navigli, NoLo" list="zone-list" autocomplete="off" />
           </div>
           <div class="field">
             <label>Foto</label>
             <input id="foto-${idx}" type="file" accept="image/*" multiple />
+            <div id="preview-foto-${idx}" class="foto-preview"></div>
           </div>
         `;
         localiContainer.appendChild(div);
         (window as unknown as Record<string, (n: number) => void>).attachAutocompleteToNew(idx);
+        document.getElementById(`foto-${idx}`)!.addEventListener('change', (e) => {
+          const files = Array.from((e.target as HTMLInputElement).files ?? []);
+          (e.target as HTMLInputElement).value = '';
+          addFotoToLocale(String(idx), files);
+        });
       }
 
       modRadios.forEach((r) => r.addEventListener('change', () => {
@@ -393,30 +411,52 @@ export const prerender = false;
       }));
       document.getElementById('add-locale-btn')!.addEventListener('click', addLocaleBlock);
 
-      // Foto preview live (singolo)
-      document.getElementById('foto-0')!.addEventListener('change', (e) => {
-        const files = (e.target as HTMLInputElement).files;
-        updateFotoPreview('preview-foto-0', files);
-      });
+      // File tracking for step 1 (supports per-file removal)
+      const fotoByLocale: Record<string, File[]> = {};
 
-      function updateFotoPreview(containerId: string, files: FileList | null) {
-        let container = document.getElementById(containerId);
-        if (!container) {
-          container = document.createElement('div');
-          container.id = containerId;
-          container.className = 'foto-preview';
-          const fileInput = document.querySelector(`#${containerId.replace('preview-', '')}`)!;
-          fileInput.parentNode!.insertBefore(container, fileInput.nextSibling);
+      function addFotoToLocale(idx: string, newFiles: File[]) {
+        if (!fotoByLocale[idx]) fotoByLocale[idx] = [];
+        fotoByLocale[idx].push(...newFiles);
+        renderFotoPreviewRemovable(idx);
+      }
+
+      function removeFotoFromLocale(idx: string, fileIdx: number) {
+        if (fotoByLocale[idx]) {
+          fotoByLocale[idx].splice(fileIdx, 1);
+          renderFotoPreviewRemovable(idx);
         }
+      }
+
+      function renderFotoPreviewRemovable(idx: string) {
+        const containerId = `preview-foto-${idx}`;
+        const container = document.getElementById(containerId);
+        if (!container) return;
         container.innerHTML = '';
-        if (!files) return;
-        Array.from(files).forEach((f) => {
+        const files = fotoByLocale[idx] || [];
+        files.forEach((f, fi) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'foto-preview-item';
           const img = document.createElement('img');
           img.src = URL.createObjectURL(f);
           img.alt = f.name;
-          container!.appendChild(img);
+          wrap.appendChild(img);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn-remove-foto-step1';
+          btn.textContent = '×';
+          btn.title = 'Rimuovi foto';
+          btn.addEventListener('click', () => removeFotoFromLocale(idx, fi));
+          wrap.appendChild(btn);
+          container.appendChild(wrap);
         });
       }
+
+      // Foto input listener (singolo)
+      document.getElementById('foto-0')!.addEventListener('change', (e) => {
+        const files = Array.from((e.target as HTMLInputElement).files ?? []);
+        (e.target as HTMLInputElement).value = '';
+        addFotoToLocale('0', files);
+      });
 
       // Colleziona input Step 1
       function getModalita(): 'singolo' | 'multiplo' {
@@ -430,7 +470,7 @@ export const prerender = false;
           return [{
             indirizzo: (document.getElementById('indirizzo-0') as HTMLInputElement).value.trim(),
             zona: (document.getElementById('zona-0') as HTMLInputElement).value.trim(),
-            fotoInput: document.getElementById('foto-0') as HTMLInputElement,
+            fotoFiles: fotoByLocale['0'] || [],
             lat: parseFloat((document.getElementById('lat-0') as HTMLInputElement)?.value) || undefined,
             lng: parseFloat((document.getElementById('lng-0') as HTMLInputElement)?.value) || undefined,
           }];
@@ -440,7 +480,7 @@ export const prerender = false;
           return {
             indirizzo: (document.getElementById(`indirizzo-${idx}`) as HTMLInputElement).value.trim(),
             zona: (document.getElementById(`zona-${idx}`) as HTMLInputElement).value.trim(),
-            fotoInput: document.getElementById(`foto-${idx}`) as HTMLInputElement,
+            fotoFiles: fotoByLocale[idx] || [],
             lat: parseFloat((document.getElementById(`lat-${idx}`) as HTMLInputElement)?.value) || undefined,
             lng: parseFloat((document.getElementById(`lng-${idx}`) as HTMLInputElement)?.value) || undefined,
           };
@@ -467,7 +507,7 @@ export const prerender = false;
 
         // Resize foto
         const localiWithFoto = await Promise.all(localiInput.map(async (l) => {
-          const files = Array.from(l.fotoInput?.files ?? []);
+          const files = l.fotoFiles;
           const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1600)));
           return { indirizzo: l.indirizzo, zona: l.zona, foto, lat: l.lat, lng: l.lng };
         }));
