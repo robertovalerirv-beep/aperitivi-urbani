@@ -531,7 +531,7 @@ export const prerender = false;
               <label for="sentiment-${i}">Sentiment</label>
               <select id="sentiment-${i}">
                 <option value="">— nessuno —</option>
-                ${SENTIMENTS.map((s) => `<option value="${s}" ${arric.sentiment === s ? 'selected' : ''}>${s}</option>`).join('')}
+                ${SENTIMENTS.map((s) => `<option value="${s}">${s}</option>`).join('')}
               </select>
             </div>
             <div class="field">
