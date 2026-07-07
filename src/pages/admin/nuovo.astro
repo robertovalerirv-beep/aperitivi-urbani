@@ -544,7 +544,7 @@ const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].s
         const arric = enrichData.arricchimento as Record<string, unknown> ?? {};
         const TIPI = ['aperitivo','ristorante','cocktail-bar','wine-bar','bistrot','trattoria','pizzeria','caffetteria','sushi','etnico','orientale','vegetariano','pesce','carne','pasticceria','locale-easy','locale-raffinato','altro'];
         const TIPI_LABELS: Record<string,string> = {'locale-easy':'Locale easy','locale-raffinato':'Locale raffinato'};
-        const FASCE = ['€','€€','€€€','€€€€'];
+        const FASCE = ['€','€€','€€€','€€€€','€€€€€'];
         const SENTIMENTS = ['entusiasta','positivo','neutro','tiepido','critico'];
 
         const localiArr = localiWithFoto.map((l, i) => {
