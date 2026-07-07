@@ -46,15 +46,17 @@ const mapLocaliJson = JSON.stringify(mapLocali);
 
   <section class="filters" aria-label="Filtri">
     <div class="filter-group">
-      <span class="filter-label">Zona</span>
-      <div class="chip-group" role="group">
-        {zone.map((z) => (
-          <label class="chip">
-            <input type="checkbox" class="f-zona" value={z} />
-            <span>{z}</span>
-          </label>
-        ))}
-      </div>
+      <details class="zona-dropdown">
+        <summary id="zona-summary">Zona</summary>
+        <div class="chip-group" role="group">
+          {zone.map((z) => (
+            <label class="chip">
+              <input type="checkbox" class="f-zona" value={z} />
+              <span>{z}</span>
+            </label>
+          ))}
+        </div>
+      </details>
     </div>
 
     <div class="filter-group">
@@ -272,6 +274,56 @@ const mapLocaliJson = JSON.stringify(mapLocali);
     color: var(--white);
     border-color: var(--accent);
   }
+  .zona-dropdown {
+    position: relative;
+  }
+  .zona-dropdown summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--cream);
+    color: var(--ink);
+    border: 1px solid var(--cream-border);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .zona-dropdown summary::-webkit-details-marker {
+    display: none;
+  }
+  .zona-dropdown summary::after {
+    content: "";
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--ink);
+    margin-left: 0.15rem;
+    transition: transform 0.15s ease;
+  }
+  .zona-dropdown[open] summary::after {
+    transform: rotate(180deg);
+  }
+  .zona-dropdown .chip-group {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    left: 0;
+    z-index: 20;
+    background: var(--cream);
+    border: 1px solid var(--cream-border);
+    border-radius: 10px;
+    padding: 0.6rem;
+    max-height: 260px;
+    overflow-y: auto;
+    min-width: 220px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
   .toggle {
     display: inline-flex;
     align-items: center;
@@ -311,6 +363,14 @@ const mapLocaliJson = JSON.stringify(mapLocali);
   const fFascia = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="f-fascia"]'));
   const fSponsor = document.getElementById("f-sponsor") as HTMLInputElement | null;
   const resetBtn = document.getElementById("reset-filters")!;
+  const zonaDropdown = document.querySelector<HTMLDetailsElement>(".zona-dropdown");
+  const zonaSummary = document.getElementById("zona-summary");
+
+  function updateZonaSummaryLabel() {
+    if (!zonaSummary) return;
+    const n = fZona.filter((c) => c.checked).length;
+    zonaSummary.textContent = n > 0 ? `Zona (${n})` : "Zona";
+  }
 
   function readState() {
     return {
@@ -371,6 +431,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
     countEl.textContent = String(visible);
     emptyEl.style.display = visible === 0 ? "" : "none";
     writeUrl(s);
+    updateZonaSummaryLabel();
 
     const bySlug = (window as unknown as { _markersBySlug?: Record<string, { setVisible: (v: boolean) => void }> })._markersBySlug;
     if (bySlug) {
@@ -391,6 +452,12 @@ const mapLocaliJson = JSON.stringify(mapLocali);
     fFascia.forEach((r) => (r.checked = r.value === ""));
     if (fSponsor) fSponsor.checked = true;
     apply();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (zonaDropdown && zonaDropdown.open && !zonaDropdown.contains(e.target as Node)) {
+      zonaDropdown.open = false;
+    }
   });
 
   loadFromUrl();
