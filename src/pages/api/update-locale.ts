@@ -105,6 +105,10 @@ function normalizeFields(input: Record<string, unknown>) {
       .map((s) => String(s).trim())
       .filter((s) => s.length > 0);
   }
+  if ("description" in input) {
+    // Body vuoto è legittimo: nessuna validazione bloccante.
+    out.description = String(input.description ?? "");
+  }
   if ("caption" in input) {
     // Solo trim ai bordi: gli a-capo interni restano e vengono escapati in scrittura.
     out.caption = String(input.caption ?? "").trim();
@@ -207,7 +211,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       fm = fm.replace(captionRe, (_full, prefix) => `${prefix} "${escaped}"`);
     }
 
-    const newContent = `---\n${fm}\n---\n${tail}`;
+    // Il body markdown (descrizione) inizia subito dopo il `---` di chiusura:
+    // a-capo iniziali rimossi, un solo a-capo finale. Body vuoto → file chiuso su `---\n`.
+    const newTail = typeof fields.description === "string"
+      ? (fields.description.trim() ? fields.description.replace(/^[\r\n]+/, "").trimEnd() + "\n" : "")
+      : tail;
+    const newContent = `---\n${fm}\n---\n${newTail}`;
     const newB64 = b64Encode(newContent);
 
     const commit = await gh(token as string, `/repos/${owner}/${repo}/contents/${filePath}`, {
