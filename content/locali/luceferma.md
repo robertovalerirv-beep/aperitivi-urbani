@@ -29,7 +29,7 @@ visite:
   - data: "2026-06-09"
     sponsorizzato: true
     note_reel: null
-    caption: "Arte, design, pensiero e una granita! \n\nUna bella novità un locale che è un po’ un museo ma non di quelli polverosi, di quelli che si vivono.\n\n@luceferma.milano \n\n(Nell’ultima slide io e Ale che mandiamo un provino per essere prese a Un posto al Sole)\n\n#invito #luceferma #lucefermamilano\nRiga di test con \"virgolette\" e a-capo — verifica end-to-end."
+    caption: "Arte, design, pensiero e una granita! \n\nUna bella novità un locale che è un po’ un museo ma non di quelli polverosi, di quelli che si vivono.\n\n@luceferma.milano \n\n(Nell’ultima slide io e Ale che mandiamo un provino per essere prese a Un posto al Sole)\n\n#invito #luceferma #lucefermamilano"
     post_url: "https://www.instagram.com/p/DZXN3u6DQfI/?img_index=7&igsh=bnhxam9yYzRsZGNv"
     foto: []
 ---
