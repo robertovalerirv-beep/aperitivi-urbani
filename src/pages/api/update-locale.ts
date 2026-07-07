@@ -206,10 +206,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       fm = fm.replace(captionRe, (_full, prefix) => `${prefix} "${escaped}"`);
     }
 
-    // Il body markdown (descrizione) inizia subito dopo il `---` di chiusura:
-    // a-capo iniziali rimossi, un solo a-capo finale. Body vuoto → file chiuso su `---\n`.
     const newTail = typeof fields.description === "string"
-      ? (fields.description.trim() ? fields.description.replace(/^[\r\n]+/, "").trimEnd() + "\n" : "")
+      ? (fields.description.trim() ? fields.description.trimEnd() + "\n" : "")
       : tail;
     const newContent = `---\n${fm}\n---\n${newTail}`;
     const newB64 = b64Encode(newContent);
