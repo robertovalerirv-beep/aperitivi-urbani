@@ -91,6 +91,19 @@ const mapLocaliJson = JSON.stringify(mapLocali);
       </div>
     )}
 
+    <div class="filter-group">
+      <label for="sort-select" class="filter-label">Ordina per</label>
+      <select id="sort-select">
+        <option value="">più recenti</option>
+        <option value="data-desc">data visita: più recente</option>
+        <option value="data-asc">data visita: meno recente</option>
+        <option value="prezzo-asc">prezzo: crescente</option>
+        <option value="prezzo-desc">prezzo: decrescente</option>
+        <option value="alfa-asc">nome: A → Z</option>
+        <option value="alfa-desc">nome: Z → A</option>
+      </select>
+    </div>
+
     <button id="reset-filters" type="button" class="reset">azzera filtri</button>
   </section>
 
@@ -109,6 +122,8 @@ const mapLocaliJson = JSON.stringify(mapLocali);
           data-tipi={loc.data.tipo.join(",")}
           data-fascia={loc.data.fascia_prezzo ?? ""}
           data-sponsor={loc.data.sponsorizzato ? "1" : "0"}
+          data-data-visita={ultima.data}
+          data-nome={loc.data.nome}
         >
           <a href={`/locali/${loc.data.slug}/`} class="card-link">
             <div style="font-size:1.15rem;font-weight:600;font-family:'Fraunces',serif">
@@ -359,17 +374,56 @@ const mapLocaliJson = JSON.stringify(mapLocali);
 <script>
   const list = document.getElementById("locali-list")!;
   const cards = Array.from(list.querySelectorAll<HTMLElement>(".locale-card"));
+  const originalOrder = Array.from(list.querySelectorAll<HTMLElement>(".locale-card"));
   const countEl = document.getElementById("count")!;
   const emptyEl = document.getElementById("empty-state")!;
   const fZona = Array.from(document.querySelectorAll<HTMLInputElement>(".f-zona"));
   const fTipo = Array.from(document.querySelectorAll<HTMLInputElement>(".f-tipo"));
   const fFascia = Array.from(document.querySelectorAll<HTMLInputElement>(".f-fascia"));
   const fSponsor = document.getElementById("f-sponsor") as HTMLInputElement | null;
+  const sortSelect = document.getElementById("sort-select") as HTMLSelectElement;
   const resetBtn = document.getElementById("reset-filters")!;
   const filterDropdowns = Array.from(document.querySelectorAll<HTMLDetailsElement>(".filter-dropdown"));
   const zonaSummary = document.getElementById("zona-summary");
   const tipoSummary = document.getElementById("tipo-summary");
   const fasciaSummary = document.getElementById("fascia-summary");
+
+  function parseFascia(card: HTMLElement): number | null {
+    const f = card.dataset.fascia || "";
+    return f.length > 0 ? f.length : null;
+  }
+
+  function sortCards(mode: string) {
+    if (mode === "") {
+      originalOrder.forEach((el) => list.appendChild(el));
+      return;
+    }
+    const current = Array.from(list.querySelectorAll<HTMLElement>(".locale-card"));
+    current.sort((a, b) => {
+      switch (mode) {
+        case "data-desc":
+          return (b.dataset.dataVisita || "").localeCompare(a.dataset.dataVisita || "");
+        case "data-asc":
+          return (a.dataset.dataVisita || "").localeCompare(b.dataset.dataVisita || "");
+        case "prezzo-asc":
+        case "prezzo-desc": {
+          const fa = parseFascia(a);
+          const fb = parseFascia(b);
+          if (fa === null && fb === null) return 0;
+          if (fa === null) return 1;
+          if (fb === null) return -1;
+          return mode === "prezzo-asc" ? fa - fb : fb - fa;
+        }
+        case "alfa-asc":
+          return (a.dataset.nome || "").localeCompare(b.dataset.nome || "", "it", { sensitivity: "base" });
+        case "alfa-desc":
+          return (b.dataset.nome || "").localeCompare(a.dataset.nome || "", "it", { sensitivity: "base" });
+        default:
+          return 0;
+      }
+    });
+    current.forEach((el) => list.appendChild(el));
+  }
 
   function updateSummaryLabel(summary: HTMLElement | null, label: string, n: number) {
     if (!summary) return;
@@ -382,6 +436,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
       tipi: fTipo.filter((c) => c.checked).map((c) => c.value),
       fasce: fFascia.filter((c) => c.checked).map((c) => c.value),
       sponsor: fSponsor ? fSponsor.checked : true,
+      sort: sortSelect.value,
     };
   }
 
@@ -391,6 +446,7 @@ const mapLocaliJson = JSON.stringify(mapLocali);
     if (state.tipi.length) p.set("tipi", state.tipi.join(","));
     if (state.fasce.length) p.set("fasce", state.fasce.join(","));
     if (!state.sponsor) p.set("sponsor", "0");
+    if (state.sort) p.set("sort", state.sort);
     const qs = p.toString();
     history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
   }
@@ -416,6 +472,9 @@ const mapLocaliJson = JSON.stringify(mapLocali);
       fFascia.forEach((c) => (c.checked = c.value === fasciaParam));
     }
     if (fSponsor && p.get("sponsor") === "0") fSponsor.checked = false;
+    const sortParam = p.get("sort");
+    if (sortParam) sortSelect.value = sortParam;
+    sortCards(sortSelect.value);
   }
 
   function apply() {
@@ -456,11 +515,18 @@ const mapLocaliJson = JSON.stringify(mapLocali);
     el.addEventListener("change", apply)
   );
 
+  sortSelect.addEventListener("change", () => {
+    sortCards(sortSelect.value);
+    writeUrl(readState());
+  });
+
   resetBtn.addEventListener("click", () => {
     fZona.forEach((c) => (c.checked = false));
     fTipo.forEach((c) => (c.checked = false));
     fFascia.forEach((c) => (c.checked = false));
     if (fSponsor) fSponsor.checked = true;
+    sortSelect.value = "";
+    sortCards("");
     apply();
   });
 
