@@ -398,7 +398,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const newCommitData = await gh(token, `/repos/${owner}/${repo}/git/commits`, {
               method: "POST",
               body: JSON.stringify({
-                message: `admin: add ${slug} [skip ci]`,
+                message: `admin: add ${slug}`,
                 tree: newTreeSha,
                 parents: [commitSha],
               }),
