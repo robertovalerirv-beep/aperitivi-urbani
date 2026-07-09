@@ -47,6 +47,10 @@ function b64Encode(str: string): string {
 
 const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€", "€€€€€"] as const;
 
+function stripNewlines(v: unknown): string {
+  return String(v ?? "").replace(/[\r\n]+/g, " ").trim();
+}
+
 function makeSlug(nome: string): string {
   return nome
     .toLowerCase()
@@ -250,7 +254,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const results: { slug: string; success: boolean; commit_url: string | null; foto_salvate: number; error?: string }[] = [];
 
     for (const locale of locali) {
-      const nome = String(locale.nome ?? "").trim();
+      const nome = stripNewlines(locale.nome);
       const slug = makeSlug(nome);
 
       if (!slug) {
@@ -349,8 +353,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           contenutoMD = buildFrontmatter({
             nome,
             slug,
-            indirizzo: String(locale.indirizzo ?? ""),
-            zona: String(locale.zona ?? ""),
+            indirizzo: stripNewlines(locale.indirizzo),
+            zona: stripNewlines(locale.zona),
             tipo: Array.isArray(locale.tipo) ? locale.tipo : [],
             fascia_prezzo: fascia,
             url_post,

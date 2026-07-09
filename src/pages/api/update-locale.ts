@@ -78,16 +78,20 @@ function setArrayBlock(fm: string, key: string, arr: unknown[]): string {
   return fm + `\n${block}`;
 }
 
+function stripNewlines(v: unknown): string {
+  return String(v ?? "").replace(/[\r\n]+/g, " ").trim();
+}
+
 function normalizeFields(input: Record<string, unknown>) {
   const out: Record<string, unknown> = {};
   for (const k of ["zona", "indirizzo", "fascia_prezzo", "sentiment"] as const) {
     if (k in input) {
       const v = input[k];
-      out[k] = v === "" || v === undefined ? null : v;
+      out[k] = v === "" || v === undefined ? null : stripNewlines(v);
     }
   }
-  if ("nome" in input) out.nome = String(input.nome ?? "").trim();
-  if ("citta" in input) out.citta = String(input.citta ?? "").trim() || "Milano";
+  if ("nome" in input) out.nome = stripNewlines(input.nome);
+  if ("citta" in input) out.citta = stripNewlines(input.citta) || "Milano";
   if ("voto_dedotto" in input) {
     const v = input.voto_dedotto;
     if (v === null || v === "" || v === undefined) out.voto_dedotto = null;

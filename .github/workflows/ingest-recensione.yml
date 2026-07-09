@@ -12,7 +12,9 @@ permissions:
 
 jobs:
   ingest:
-    if: contains(github.event.issue.labels.*.name, 'recensione')
+    if: >
+      contains(github.event.issue.labels.*.name, 'recensione') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
