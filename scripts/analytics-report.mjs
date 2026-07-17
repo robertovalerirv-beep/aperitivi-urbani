@@ -51,23 +51,41 @@ const CONTENT_DIR = path.join(REPO_ROOT, "content", "locali");
 const OUT_DIR = path.join(__dirname, "out");
 const GRAPHQL_ENDPOINT = "https://api.cloudflare.com/client/v4/graphql";
 
-// Beacon token = siteTag per il filtro Web Analytics. Un token per dominio,
-// mai riusare quello di un altro sito (mischierebbe i dati di traffico).
+// siteTag = valore usato dall'API GraphQL Analytics per filtrare
+// rumPageloadEventsAdaptiveGroups. NON è detto che coincida col beacon
+// token incollato nello snippet <script> lato client (data-cf-beacon):
+// per cami-mangia-cose i due valori sono diversi — verificato il 10 lug
+// 2026 confrontando il traffico reale (path /locali/<slug> e
+// /admin/<slug> corrispondenti ai locali pubblicati) associato a ciascun
+// siteTag via query GraphQL con dimensions { siteTag }, senza filtro.
+// Se un sito smette di restituire dati pur avendo traffico reale in
+// dashboard, ripetere quella verifica prima di assumere che il siteTag
+// sia ancora corretto.
+//
+// contentDir: cartella content/locali da cui fare il join con le pagine
+// visitate. Ogni sito creator vive in un repo separato con la propria
+// working copy locale; se omesso si usa CONTENT_DIR (repo corrente).
 const SITES = [
   { slug: "aperitivi-urbani", siteTag: "483a9a30282c4fdb95a8bfde2de693cb" },
-  { slug: "cami-mangia-cose", siteTag: "590611f95ce745c6aef289a0cbe9fa56" },
+  {
+    slug: "cami-mangia-cose",
+    siteTag: "7fc32bfd6e294c139aa5df0ea9f8bbb0",
+    contentDir: "C:\\Users\\RobertoVALERI\\Desktop\\cami-mangia-cose-tmp\\content\\locali",
+  },
 ];
 
 // ---------------------------------------------------------------------------
 // CLI args
 // ---------------------------------------------------------------------------
 function parseArgs(argv) {
-  const out = { days: 30, site: null };
+  const out = { days: 30, site: null, since: null, until: null };
   for (const arg of argv) {
     const m = arg.match(/^--(\w+)=(.*)$/);
     if (!m) continue;
     if (m[1] === "days") out.days = parseInt(m[2], 10);
     if (m[1] === "site") out.site = m[2];
+    if (m[1] === "since") out.since = m[2];
+    if (m[1] === "until") out.until = m[2];
   }
   return out;
 }
@@ -200,17 +218,17 @@ function extractFrontmatter(src) {
 // ---------------------------------------------------------------------------
 // STEP 3 — lookup contenuti reali (sostituisce simulate_content_lookup)
 // ---------------------------------------------------------------------------
-async function loadLocaliContent() {
+async function loadLocaliContent(contentDir) {
   const map = new Map();
   let files;
   try {
-    files = (await readdir(CONTENT_DIR)).filter((f) => f.endsWith(".md"));
+    files = (await readdir(contentDir)).filter((f) => f.endsWith(".md"));
   } catch {
-    console.warn(`Attenzione: cartella ${CONTENT_DIR} non trovata, join disabilitato.`);
+    console.warn(`Attenzione: cartella ${contentDir} non trovata, join disabilitato.`);
     return map;
   }
   for (const file of files) {
-    const src = await readFile(path.join(CONTENT_DIR, file), "utf8");
+    const src = await readFile(path.join(contentDir, file), "utf8");
     const fm = extractFrontmatter(src);
     if (!fm || !fm.slug) continue;
     map.set(fm.slug, {
@@ -360,12 +378,12 @@ async function writeReport(siteSlug, report) {
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
-  const { days, site: siteFilter } = parseArgs(process.argv.slice(2));
+  const { days, site: siteFilter, since: sinceArg, until: untilArg } = parseArgs(process.argv.slice(2));
 
-  const until = new Date();
-  const since = new Date(until.getTime() - days * 24 * 60 * 60 * 1000);
-  const sinceISO = since.toISOString();
-  const untilISO = until.toISOString();
+  const untilDate = untilArg ? new Date(untilArg) : new Date();
+  const sinceDate = sinceArg ? new Date(sinceArg) : new Date(untilDate.getTime() - days * 24 * 60 * 60 * 1000);
+  const sinceISO = sinceDate.toISOString();
+  const untilISO = untilDate.toISOString();
 
   const sitesToRun = siteFilter ? SITES.filter((s) => s.slug === siteFilter) : SITES;
   if (sitesToRun.length === 0) {
@@ -376,13 +394,13 @@ async function main() {
   console.log(`Range: ${sinceISO} → ${untilISO} (${days} giorni)`);
   console.log(`Siti: ${sitesToRun.map((s) => s.slug).join(", ")}`);
 
-  const localiMap = await loadLocaliContent();
-  console.log(`Locali pubblicati trovati: ${localiMap.size}`);
-
   await import("node:fs").then((fs) => fs.mkdirSync(OUT_DIR, { recursive: true }));
 
   for (const site of sitesToRun) {
     console.log(`\n--- ${site.slug} ---`);
+    const localiMap = await loadLocaliContent(site.contentDir ?? CONTENT_DIR);
+    console.log(`  Locali pubblicati trovati: ${localiMap.size}`);
+
     let data;
     try {
       data = await fetchCloudflareAnalytics({ siteTag: site.siteTag, sinceISO, untilISO });
