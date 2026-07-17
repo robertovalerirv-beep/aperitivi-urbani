@@ -72,6 +72,11 @@ const SITES = [
     siteTag: "7fc32bfd6e294c139aa5df0ea9f8bbb0",
     contentDir: "C:\\Users\\RobertoVALERI\\Desktop\\cami-mangia-cose-tmp\\content\\locali",
   },
+  {
+    slug: "milano-affamata",
+    siteTag: "bde5a9d31d04494eb5ff94afac1019a6",
+    contentDir: "C:\\Users\\RobertoVALERI\\Desktop\\milano-affamata\\content\\locali",
+  },
 ];
 
 // ---------------------------------------------------------------------------
