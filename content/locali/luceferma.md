@@ -1,15 +1,16 @@
 ---
-nome: "LUCEFERMA"
+nome: LUCEFERMA
 slug: "luceferma"
-indirizzo: "Via Amatore Sciesa, 6, 20135 Milano MI, Italy"
+citta: Milano
+indirizzo: Via Amatore Sciesa, 6, 20135 Milano MI, Italy
 lat: 45.4613701
 lng: 9.2093129
-zona: "Porta Romana"
+zona: Porta Romana
 tipo:
   - cocktail-bar
   - bistrot
   - caffetteria
-fascia_prezzo: "€"
+fascia_prezzo: €
 instagram_url: "https://www.instagram.com/p/DZXN3u6DQfI/?img_index=7&igsh=bnhxam9yYzRsZGNv"
 foto:
   - luceferma-1.jpg
@@ -23,13 +24,13 @@ foto:
 sponsorizzato: true
 piatti_drink_citati:
   - granita
-sentiment: "positivo"
-voto_dedotto: 4
+sentiment: positivo
+voto_dedotto: 5
 visite:
   - data: "2026-06-09"
     sponsorizzato: true
     note_reel: null
-    caption: "Arte, design, pensiero e una granita! \n\nUna bella novità un locale che è un po’ un museo ma non di quelli polverosi, di quelli che si vivono.\n\n@luceferma.milano \n\n(Nell’ultima slide io e Ale che mandiamo un provino per essere prese a Un posto al Sole)\n\n#invito #luceferma #lucefermamilano"
+    caption: "Arte, design, pensiero e una granita! \n\nUna bella novità un locale che è un po’ un museo ma non di quelli polverosi, di quelli che si vivono.\n\n@luceferma.milano \n\n#invito #luceferma #lucefermamilano"
     post_url: "https://www.instagram.com/p/DZXN3u6DQfI/?img_index=7&igsh=bnhxam9yYzRsZGNv"
     foto: []
 ---
