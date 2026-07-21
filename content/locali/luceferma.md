@@ -1,5 +1,5 @@
 ---
-nome: LUCEFERMA
+nome: Luceferma
 slug: "luceferma"
 citta: Milano
 indirizzo: Via Amatore Sciesa, 6, 20135 Milano MI, Italy
