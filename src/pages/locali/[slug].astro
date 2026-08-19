@@ -15,6 +15,20 @@ const { loc } = Astro.props;
 const { Content } = await render(loc);
 const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(a.data));
 
+// z.string().url() di Zod accetta "javascript:alert(1)": per il parser WHATWG
+// e' una URL sintatticamente valida. Renderizzata in href e' XSS, e la CSP non
+// aiuta perche' script-src ha 'unsafe-inline'. Allowlist esplicita di http/https
+// prima di renderizzare qualunque link che arrivi dal frontmatter.
+function isSafeHttpUrl(u: unknown): boolean {
+  if (typeof u !== "string" || !u.trim()) return false;
+  try {
+    const p = new URL(u).protocol;
+    return p === "http:" || p === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function starsStr(v: number): string {
   const full = Math.floor(v);
   const half = v - full >= 0.5 ? 1 : 0;
@@ -200,7 +214,9 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
           <p class="muted" style="font-size:0.9rem;margin:0 0 0.5rem">
             {v.data}
             {v.fonte_tipo === "lista" && <span style="margin-left:0.5rem;background:var(--accent-soft);color:var(--ink);font-size:0.7rem;padding:0.1rem 0.45rem;border-radius:4px">da post-lista</span>}
-            {" · "}<a href={v.post_url} rel="noopener" style="color:var(--accent)">post originale ↗</a>
+            {isSafeHttpUrl(v.post_url) && (
+              <>{" · "}<a href={v.post_url} rel="noopener" style="color:var(--accent)">post originale ↗</a></>
+            )}
           </p>
           {v.foto.length > 0 && (
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">

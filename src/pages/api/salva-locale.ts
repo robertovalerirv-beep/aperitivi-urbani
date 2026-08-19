@@ -47,6 +47,19 @@ function b64Encode(str: string): string {
 
 const FASCIA_ENUM = ["€", "€€", "€€€", "€€€€", "€€€€€"] as const;
 
+// Stessa regola applicata a render-time in locali/[slug].astro: solo
+// http/https. Impedisce che una URL con schema pericoloso (javascript:, data:)
+// entri nel frontmatter, invece di limitarsi a non renderizzarla dopo.
+function isSafeHttpUrl(u: unknown): boolean {
+  if (typeof u !== "string" || !u.trim()) return false;
+  try {
+    const p = new URL(u).protocol;
+    return p === "http:" || p === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function stripNewlines(v: unknown): string {
   return String(v ?? "").replace(/[\r\n]+/g, " ").trim();
 }
@@ -246,6 +259,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { url_post, data_visita, caption, note_reel, locali } = body;
     if (!url_post || typeof url_post !== "string" || !url_post.trim()) {
       return jsonResponse(400, { error: "URL post Instagram obbligatorio" });
+    }
+    if (!isSafeHttpUrl(url_post)) {
+      return jsonResponse(400, { error: "URL post Instagram non valido: sono ammessi solo indirizzi http:// o https://" });
     }
     if (!Array.isArray(locali) || locali.length === 0) {
       return jsonResponse(400, { error: "Nessun locale da salvare" });

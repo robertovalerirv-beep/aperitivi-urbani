@@ -23,14 +23,10 @@ export default defineConfig({
   integrations: [
     sitemap({
       // Fuori dalla sitemap tutto cio' che non deve finire su Google:
-      // pannello admin, form intake, endpoint API.
+      // pannello admin ed endpoint API.
       filter: (page) => {
         const path = new URL(page).pathname.replace(/\/+$/, "") || "/";
-        return (
-          !path.startsWith("/admin") &&
-          !path.startsWith("/api") &&
-          path !== "/aperitivi-intake-2026"
-        );
+        return !path.startsWith("/admin") && !path.startsWith("/api");
       },
       // Le URL in sitemap devono coincidere ESATTAMENTE con il <link rel=
       // "canonical"> della pagina, altrimenti Google vede due varianti dello

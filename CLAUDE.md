@@ -68,10 +68,12 @@ con consenso scritto dell'autrice a riutilizzare i contenuti dei post.
 Configurate come **Secret** (Encrypted):
 - `ADMIN_PASSWORD` — accesso pannello admin
 - `ANTHROPIC_API_KEY` — enrichment AI in /admin/nuovo
-- `GITHUB_TOKEN_INTAKE` — creazione issue da form intake
+- `GITHUB_TOKEN_INTAKE` — scritture su GitHub dagli endpoint admin
 - `INTAKE_REPO_OWNER` — owner del repo GitHub
 - `INTAKE_REPO_NAME` — nome del repo GitHub
-- `INTAKE_PASSWORD` — password del form intake pubblico (**da aggiungere se mancante**)
+
+Non piu' necessaria: `INTAKE_PASSWORD` proteggeva il form intake pubblico,
+rimosso dal repo — il secret puo' essere cancellato dalla dashboard CF Pages.
 
 Configurate come **Plain text**:
 - `GOOGLE_MAPS_API_KEY` — embed mappa Google su schede locali e homepage
