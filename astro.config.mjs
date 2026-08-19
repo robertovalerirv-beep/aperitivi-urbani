@@ -40,8 +40,6 @@ export default defineConfig({
         u.pathname = u.pathname.replace(/\/+$/, "") || "/";
         return { ...item, url: u.href };
       },
-      changefreq: "weekly",
-      lastmod: new Date(),
     }),
   ],
   markdown: {
