@@ -20,13 +20,103 @@ function starsStr(v: number): string {
   const half = v - full >= 0.5 ? 1 : 0;
   return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - half);
 }
+const d = loc.data;
+const citta = d.citta || "Milano";
+const zona = d.zona || citta;
+const canonical = new URL(`/locali/${d.slug}`, Astro.site).href;
+const fotoAssolute = (d.foto ?? []).map(
+  (f) => new URL(`/images/locali/${d.slug}/${f}`, Astro.site).href
+);
+const ultimaData = visiteOrdinate[0]?.data ?? null;
+
+// Title e description: sono cio' che Google mostra in SERP. Prima erano
+// generici ("Recensione di X a Y"), ora contengono zona, tipo di cucina,
+// fascia di prezzo e voto — cioe' i termini con cui la gente cerca.
+const luogo = zona === citta ? citta : `${zona}, ${citta}`;
+const seoTitle = `${d.nome} — ${luogo} | Aperitivi Urbani`;
+const seoDescription = [
+  `${d.nome}, ${luogo}`,
+  (d.tipo ?? []).length > 0 ? (d.tipo ?? []).join(", ") : null,
+  d.fascia_prezzo,
+  d.voto_dedotto != null ? `voto ${d.voto_dedotto}/5` : null,
+]
+  .filter(Boolean)
+  .join(" · ")
+  .slice(0, 150)
+  .concat(". Recensione, foto e indirizzo.");
+
+// Dati strutturati Restaurant + Review: sono cio' che rende la scheda
+// eleggibile ai rich result (stelle, prezzo, indirizzo) nei risultati Google.
+// Volutamente NIENTE aggregateRating: e' una recensione singola d'autore,
+// e un aggregateRating finto e' motivo di penalizzazione.
+const jsonLd: Record<string, unknown> = {
+  "@context": "https://schema.org",
+  "@type": "Restaurant",
+  name: d.nome,
+  url: canonical,
+  ...(fotoAssolute.length > 0 ? { image: fotoAssolute } : {}),
+  address: {
+    "@type": "PostalAddress",
+    ...(d.indirizzo ? { streetAddress: d.indirizzo } : {}),
+    addressLocality: citta,
+    addressCountry: "IT",
+  },
+  ...(d.lat != null && d.lng != null
+    ? { geo: { "@type": "GeoCoordinates", latitude: d.lat, longitude: d.lng } }
+    : {}),
+  ...((d.tipo ?? []).length > 0 ? { servesCuisine: d.tipo } : {}),
+  ...(d.fascia_prezzo ? { priceRange: d.fascia_prezzo } : {}),
+  ...(d.voto_dedotto != null
+    ? {
+        review: {
+          "@type": "Review",
+          author: { "@type": "Person", name: "Aperitivi Urbani" },
+          publisher: { "@type": "Organization", name: "Aperitivi Urbani" },
+          ...(ultimaData ? { datePublished: ultimaData } : {}),
+          reviewRating: {
+            "@type": "Rating",
+            ratingValue: d.voto_dedotto,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        },
+      }
+    : {}),
+};
+
+const breadcrumbLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Tutti i locali",
+      item: new URL("/", Astro.site).href,
+    },
+    { "@type": "ListItem", position: 2, name: d.nome, item: canonical },
+  ],
+};
+
+// `<` va sempre escapato dentro <script>: un nome di locale con "<"
+// chiuderebbe il tag e trasformerebbe i dati in markup.
+const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 ---
 
-<Layout title={`${loc.data.nome} — Aperitivi Urbani`} description={`Recensione di ${loc.data.nome} a ${loc.data.zona ?? "Milano"}`}>
+<Layout
+  title={seoTitle}
+  description={seoDescription}
+  ogType="article"
+  image={(d.foto ?? []).length > 0 ? `/images/locali/${d.slug}/${d.foto[0]}` : undefined}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={ldJson(jsonLd)} />
+    <script type="application/ld+json" set:html={ldJson(breadcrumbLd)} />
+  </Fragment>
   <p><a href="/" style="color:var(--accent-soft)">← tutti i locali</a></p>
 
   <article class="card scheda">
-    <h2 style="margin:0 0 0.25rem">{loc.data.nome}</h2>
+    <h1 style="margin:0 0 0.25rem;font-size:1.6rem">{loc.data.nome}</h1>
     <p class="muted" style="margin-top:0">
       {loc.data.zona || "Milano"}
       {loc.data.indirizzo && <> · {loc.data.indirizzo}</>}
@@ -52,7 +142,7 @@ function starsStr(v: number): string {
           <img
             id="gallery-hero-img"
             src={`/images/locali/${loc.data.slug}/${loc.data.foto[0]}`}
-            alt={loc.data.nome}
+            alt={`${loc.data.nome} — ${luogo}`}
             style="width:100%;aspect-ratio:4/3;object-fit:cover;object-position:center;border-radius:10px;display:block;image-rendering:auto"
           />
           {loc.data.foto.length > 1 && (
@@ -70,6 +160,8 @@ function starsStr(v: number): string {
                 data-full={`/images/locali/${loc.data.slug}/${f}`}
                 src={`/images/locali/${loc.data.slug}/${f}`}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 style={`width:56px;height:56px;object-fit:cover;object-position:center;border-radius:6px;cursor:pointer;flex:0 0 auto;border:2px solid ${i === 0 ? "var(--accent)" : "transparent"};image-rendering:auto`}
               />
             ))}
@@ -112,7 +204,7 @@ function starsStr(v: number): string {
           </p>
           {v.foto.length > 0 && (
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
-              {v.foto.map((f) => <img src={f} alt="" style="width:240px;max-width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;flex-shrink:0" />)}
+              {v.foto.map((f) => <img src={f} alt="" loading="lazy" decoding="async" style="width:240px;max-width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;flex-shrink:0" />)}
             </div>
           )}
           <p style="white-space:pre-line">{v.caption}</p>

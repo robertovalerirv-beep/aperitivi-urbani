@@ -2,8 +2,33 @@
 interface Props {
   title: string;
   description?: string;
+  /** Immagine per l'anteprima social, path assoluto dal root del sito. */
+  image?: string;
+  /** og:type: "website" per gli indici, "article" per la scheda locale. */
+  ogType?: "website" | "article";
+  /** true sulle pagine che non devono finire su Google (admin, intake). */
+  noindex?: boolean;
 }
-const { title, description } = Astro.props;
+const {
+  title,
+  description,
+  image,
+  ogType = "website",
+  noindex = false,
+} = Astro.props;
+
+// URL canonico assoluto: senza questo Google puo' indicizzare varianti
+// della stessa pagina (con/senza slash, con query di tracking) come duplicati.
+// In build il pathname porta l'estensione del file generato (.html, per via
+// di build.format "file"): va tolta, altrimenti il canonical punta a un
+// indirizzo diverso da quello linkato e messo in sitemap.
+const canonicalPath =
+  Astro.url.pathname
+    .replace(/\.html$/, "")
+    .replace(/(^|\/)index$/, "")
+    .replace(/\/+$/, "") || "/";
+const canonical = new URL(canonicalPath, Astro.site).href;
+const ogImage = image ? new URL(image, Astro.site).href : undefined;
 ---
 
 <!doctype html>
@@ -14,6 +39,32 @@ const { title, description } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={canonical} />
+    <meta
+      name="robots"
+      content={
+        noindex
+          ? "noindex, nofollow"
+          : "index, follow, max-image-preview:large, max-snippet:-1"
+      }
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#1f5564" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content="Aperitivi Urbani" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:url" content={canonical} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta
+      name="twitter:card"
+      content={ogImage ? "summary_large_image" : "summary"}
+    />
+    <meta name="twitter:title" content={title} />
+    {description && <meta name="twitter:description" content={description} />}
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+    <slot name="head" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -56,17 +107,24 @@ const { title, description } = Astro.props;
         background: var(--teal-dark);
         padding: 1.5rem 2rem;
       }
-      header.site h1 {
-        margin: 0;
-        font-size: 1.5rem;
-      }
-      header.site h1 a {
-        color: var(--white);
-      }
       header.site p {
         margin: 0.25rem 0 0;
         color: rgba(255, 255, 255, 0.75);
         font-size: 0.95rem;
+      }
+      /* Il nome del sito non e' piu' un <h1>: l'h1 di ogni pagina e' il suo
+         titolo reale (nome del locale, ecc.), che e' il segnale che conta
+         per la ricerca. Qui restano solo gli stili tipografici. */
+      header.site .brand {
+        font-family: "Fraunces", Georgia, serif;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        margin: 0;
+        font-size: 1.5rem;
+      }
+      header.site .brand a {
+        color: var(--white);
       }
       main {
         max-width: 960px;
@@ -110,14 +168,14 @@ const { title, description } = Astro.props;
       @media (max-width: 640px) {
         main { padding: 1.25rem; }
         header.site { padding: 1.25rem; }
-        header.site h1 { font-size: 1.3rem; }
+        header.site .brand { font-size: 1.3rem; }
       }
     </style>
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "483a9a30282c4fdb95a8bfde2de693cb"}'></script>
   </head>
   <body>
     <header class="site">
-      <h1><a href="/">Aperitivi Urbani</a></h1>
+      <p class="brand"><a href="/">Aperitivi Urbani</a></p>
       <p>Le recensioni di locali milanesi di Valeria Carbone</p>
     </header>
     <main>

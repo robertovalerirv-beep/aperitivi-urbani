@@ -32,10 +32,31 @@ const mapLocali = locali.map(l => ({
 })).filter(l => l.lat && l.lng);
 
 const mapLocaliJson = JSON.stringify(mapLocali);
+
+// Identita' del sito per Google: WebSite + autore. Serve a far capire che
+// dietro le recensioni c'e' una persona reale, non contenuto anonimo.
+const siteLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Aperitivi Urbani",
+  url: new URL("/", Astro.site).href,
+  inLanguage: "it-IT",
+  description:
+    "Recensioni di ristoranti, cocktail bar e locali da aperitivo a Milano di Valeria Carbone (@aperitivi_urbani).",
+  author: { "@type": "Person", name: "Valeria Carbone" },
+};
+const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 ---
 
-<Layout title="Aperitivi Urbani — Locali recensiti a Milano" description="Le recensioni di locali milanesi di @aperitivi_urbani">
-  <h2 style="margin-top:0">Tutti i locali</h2>
+<Layout
+  title={`Locali e ristoranti a Milano — ${locali.length} recensioni | Aperitivi Urbani`}
+  description={`${locali.length} ristoranti, cocktail bar e locali da aperitivo a Milano, recensiti da @aperitivi_urbani. Filtra per zona, tipo di cucina e fascia di prezzo.`}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={ldJson(siteLd)} />
+  </Fragment>
+
+  <h1 style="margin-top:0;font-size:1.6rem">Locali recensiti a Milano</h1>
   <p class="count-label" style="color:rgba(255,255,255,0.8)">
     <span id="count">{locali.length}</span> {locali.length === 1 ? "locale" : "locali"}
   </p>

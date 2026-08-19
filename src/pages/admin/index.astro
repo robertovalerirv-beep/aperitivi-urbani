@@ -6,7 +6,7 @@ const locali = await getCollection("locali");
 locali.sort((a, b) => a.data.nome.localeCompare(b.data.nome, "it"));
 ---
 
-<Layout title="Admin — Aperitivi Urbani" description="Pannello admin">
+<Layout title="Admin — Aperitivi Urbani" description="Pannello admin" noindex={true}>
   <section id="gate" class="card admin-card">
     <h2 style="margin-top:0">Admin</h2>
     <p class="muted">Inserisci la password admin per modificare i locali.</p>

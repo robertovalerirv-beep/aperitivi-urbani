@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/fix-routes.mjs",
     "preview": "astro preview",
     "validate": "node scripts/validate-locali.mjs",
     "analytics": "node scripts/analytics-report.mjs"
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@astrojs/cloudflare": "^12.6.13",
+    "@astrojs/sitemap": "^3.7.3",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "js-yaml": "^4.1.0"

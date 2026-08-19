@@ -1,0 +1,21 @@
+---
+// Senza questa pagina Cloudflare Pages risponde 200 + homepage a qualsiasi
+// URL inesistente: per Google sono soft-404, cioe' migliaia di duplicati
+// della home. Con dist/404.html la risposta diventa un 404 vero.
+export const prerender = true;
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="Pagina non trovata — Aperitivi Urbani"
+  description="La pagina che cerchi non esiste o e' stata spostata."
+  noindex={true}
+>
+  <article class="card" style="max-width:36rem">
+    <h1 style="margin-top:0">Pagina non trovata</h1>
+    <p class="muted">
+      L'indirizzo che hai aperto non esiste (o il locale e' stato rinominato).
+    </p>
+    <p><a href="/">Torna a tutti i locali</a></p>
+  </article>
+</Layout>
