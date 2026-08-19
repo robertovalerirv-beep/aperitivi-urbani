@@ -1,0 +1,6 @@
+# Cloudflare Pages serve gli asset .html all'URL senza estensione e risponde
+# 308 su quello con estensione. Google Search Console pero' verifica la
+# proprieta' chiedendo esattamente il file .html: attraverso un redirect la
+# verifica non e' garantita. Questa e' una rewrite (status 200), non un
+# redirect: l'indirizzo richiesto resta quello e risponde 200.
+/google50de0aa062a2306a.html   /google50de0aa062a2306a   200
