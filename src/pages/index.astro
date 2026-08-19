@@ -146,7 +146,7 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
           data-data-visita={ultima.data}
           data-nome={loc.data.nome}
         >
-          <a href={`/locali/${loc.data.slug}/`} class="card-link">
+          <a href={`/locali/${loc.data.slug}`} class="card-link">
             <div style="font-size:1.15rem;font-weight:600;font-family:'Fraunces',serif">
               {loc.data.nome}
             </div>
