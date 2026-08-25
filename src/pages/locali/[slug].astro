@@ -26,10 +26,26 @@ const cittaGiaPresente =
   indirizzoBase.toLowerCase().includes(String(loc.data.citta).toLowerCase());
 const indirizzoCompleto =
   indirizzoBase + (cittaGiaPresente ? "" : ", " + loc.data.citta);
-// Link semplice, non una API: aprire Maps per le indicazioni non ha costo.
-const indicazioniUrl =
+// Link esterni alla mappa. Sono normali <a href>, non chiamate a una API:
+// non serve chiave, non c'e' quota, non c'e' fatturazione. Anche l'api=1
+// nell'URL di Google e' solo la versione dello schema di URL, non una key.
+// Con le coordinate il punto e' esatto; senza, si ripiega sull'indirizzo.
+const coord = haCoordinate ? loc.data.lat + "," + loc.data.lng : "";
+const qIndirizzo = encodeURIComponent(indirizzoCompleto);
+const qNome = encodeURIComponent(loc.data.nome);
+
+const osmUrl = haCoordinate
+  ? "https://www.openstreetmap.org/?mlat=" + loc.data.lat +
+    "&mlon=" + loc.data.lng + "#map=17/" + loc.data.lat + "/" + loc.data.lng
+  : "https://www.openstreetmap.org/search?query=" + qIndirizzo;
+
+const appleUrl = haCoordinate
+  ? "https://maps.apple.com/?q=" + qNome + "&ll=" + coord
+  : "https://maps.apple.com/?q=" + qIndirizzo;
+
+const googleUrl =
   "https://www.google.com/maps/search/?api=1&query=" +
-  encodeURIComponent(indirizzoCompleto);
+  (haCoordinate ? encodeURIComponent(coord) : qIndirizzo);
 
 // z.string().url() di Zod accetta "javascript:alert(1)": per il parser WHATWG
 // e' una URL sintatticamente valida. Renderizzata in href e' XSS, e la CSP non
@@ -256,12 +272,16 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
             data-lat={String(loc.data.lat)}
             data-lng={String(loc.data.lng)}
             data-nome={loc.data.nome}
+            data-osm={osmUrl}
           ></div>
         )}
-        <p style="margin:0.7rem 0 0;font-size:0.9rem">
-          <a href={indicazioniUrl} target="_blank" rel="noopener noreferrer">
-            Apri indicazioni ↗
-          </a>
+        <p class="mappa-link">
+          Apri in mappa:
+          <a href={osmUrl} target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
+          <span aria-hidden="true">·</span>
+          <a href={appleUrl} target="_blank" rel="noopener noreferrer">Apple Mappe</a>
+          <span aria-hidden="true">·</span>
+          <a href={googleUrl} target="_blank" rel="noopener noreferrer">Google Maps</a>
         </p>
       </section>
     )}
@@ -298,7 +318,33 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
-    L.marker([lat, lng], {
+    // Il vecchio iframe Google si apriva in Maps al click. Qui lo stesso
+    // ruolo lo fa un pulsante in alto a destra, come il "Visualizza mappa
+    // ingrandita" dell'embed: e' un link, non costa nulla.
+    const osmUrl = el.dataset.osm || "";
+    if (osmUrl) {
+      const ApriMappa = L.Control.extend({
+        onAdd: function () {
+          const a = L.DomUtil.create("a", "mappa-apri");
+          a.href = osmUrl;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = "Apri la mappa ↗";
+          // Stile inline: gli stili scoped di Astro non raggiungono gli
+          // elementi che Leaflet crea a runtime.
+          a.style.cssText =
+            "background:#fff;color:#1b3942;font:600 0.78rem/1 sans-serif;" +
+            "padding:0.45rem 0.6rem;border-radius:6px;text-decoration:none;" +
+            "box-shadow:0 1px 5px rgba(0,0,0,0.3);display:inline-block";
+          // Senza questo il click trascina la mappa invece di seguire il link.
+          L.DomEvent.disableClickPropagation(a);
+          return a;
+        },
+      });
+      new ApriMappa({ position: "topright" }).addTo(map);
+    }
+
+    const marker = L.marker([lat, lng], {
       title: el.dataset.nome || "",
       icon: L.icon({
         iconUrl:
@@ -311,13 +357,41 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
           ),
         iconSize: [32, 40],
         iconAnchor: [16, 40],
+        popupAnchor: [0, -36],
       }),
     }).addTo(map);
+
+    // Anche il marker porta al link: e' il punto che l'utente clicca per primo.
+    if (osmUrl) {
+      const box = document.createElement("div");
+      box.style.cssText = "font-family:sans-serif;line-height:1.4";
+      const nome = document.createElement("strong");
+      nome.textContent = el.dataset.nome || "";
+      nome.style.cssText = "display:block;color:#1b3942;margin-bottom:0.2rem";
+      box.appendChild(nome);
+      const vai = document.createElement("a");
+      vai.href = osmUrl;
+      vai.target = "_blank";
+      vai.rel = "noopener noreferrer";
+      vai.textContent = "Apri la mappa ↗";
+      box.appendChild(vai);
+      marker.bindPopup(box);
+    }
   }
 </script>
 
 <style>
   .scheda { padding: 1.75rem; }
+
+  .mappa-link {
+    margin: 0.7rem 0 0;
+    font-size: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: baseline;
+  }
+  .mappa-link span { opacity: 0.5; }
 
   #mappa-locale {
     width: 100%;
