@@ -15,7 +15,6 @@ const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].s
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-    <!-- Maps loaded dynamically at runtime via /api/maps-key -->
     <style>
       *, *::before, *::after { box-sizing: border-box; }
       body { font-family: 'Inter', system-ui, sans-serif; background: #0f2a30; color: #f5f0e8; margin: 0; padding: 1.5rem; }
@@ -31,7 +30,25 @@ const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].s
       }
       input[type="file"] { width: 100%; padding: 0.5rem; color: #f5f0e8; }
       textarea { min-height: 120px; resize: vertical; }
-      .field { margin-bottom: 1.25rem; }
+      /* position: relative ancora la tendina dei suggerimenti Photon. */
+      .field { margin-bottom: 1.25rem; position: relative; }
+      .ac-list {
+        list-style: none; margin: 0; padding: 0;
+        position: absolute; z-index: 30; left: 0; right: 0;
+        background: #fff; border: 1px solid #d8d2c8; border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+        max-height: 260px; overflow-y: auto;
+      }
+      .ac-list[hidden] { display: none; }
+      .ac-list li {
+        padding: 0.55rem 0.7rem; cursor: pointer;
+        display: flex; flex-direction: column; gap: 0.1rem;
+        border-bottom: 1px solid #f0ece5;
+      }
+      .ac-list li:last-child { border-bottom: none; }
+      .ac-list li.ac-active { background: #eaf4f6; }
+      .ac-list strong { font-size: 0.95rem; font-weight: 600; }
+      .ac-list span { font-size: 0.82rem; color: #6b6b6b; }
       .btn-primary {
         background: #3A8FA0; color: #fff; border: none; border-radius: 6px;
         padding: 0.85rem 1.5rem; font: inherit; font-weight: 600;
@@ -198,69 +215,218 @@ const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].s
     </div>
 
     <script is:inline>
-      (function () {
-        fetch('/api/maps-key')
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            var s = document.createElement('script');
-            s.src = 'https://maps.googleapis.com/maps/api/js?key=' + (data.key || '') + '&libraries=places&callback=initAutocomplete';
-            s.async = true;
-            s.defer = true;
-            document.head.appendChild(s);
-          });
-      })();
+      // Autocomplete indirizzi via Photon (OpenStreetMap), senza API key.
+      // Sostituisce google.maps.places.Autocomplete: stesso contratto verso il
+      // resto della pagina, cioe' la globale attachAutocompleteToNew(index).
+      var PHOTON_URL = 'https://photon.komoot.io/api/';
+      // L'istanza pubblica accetta solo default/de/en/fr: con lang=it risponde 400.
+      // 'default' restituisce i nomi nella lingua locale, quindi in italiano.
+      var PHOTON_LANG = 'default';
+      // Il solo bias lat/lon non basta: cercando una via milanese arrivavano prima
+      // omonime in altre citta'. Il bbox sull'area di Milano si', ma e' un filtro
+      // duro: se non trova nulla la ricerca viene rifatta senza, cosi' un locale
+      // fuori Milano resta raggiungibile.
+      var BBOX_MILANO = '&bbox=9.02,45.35,9.35,45.56';
+      var BIAS_LAT = 45.4642;
+      var BIAS_LON = 9.19;
+      var MIN_CHARS = 3;
+      var DEBOUNCE_MS = 250;
 
-      var mapsReady = false;
-      var pendingAutocomplete = [];
-
-      window.initAutocomplete = function () {
-        mapsReady = true;
-        var toAttach = pendingAutocomplete;
-        pendingAutocomplete = [];
-        toAttach.forEach(function (index) { attachAutocomplete(index); });
-      };
-
-      function attachAutocomplete(index) {
-        var input = document.getElementById('indirizzo-' + index);
-        if (!input) return;
-        var ac = new google.maps.places.Autocomplete(input, {
-          componentRestrictions: { country: 'it' },
-          fields: ['formatted_address', 'address_components', 'geometry'],
-          types: ['establishment', 'geocode']
-        });
-        ac.addListener('place_changed', function () {
-          var place = ac.getPlace();
-          if (!place || !place.formatted_address) return;
-          document.getElementById('indirizzo-' + index).value = place.formatted_address;
-          document.getElementById('indirizzo-' + index).style.borderColor = '#3A8FA0';
-          var loc = place.geometry && place.geometry.location;
-          var latField = document.getElementById('lat-' + index);
-          var lngField = document.getElementById('lng-' + index);
-          if (loc && latField && lngField) {
-            latField.value = loc.lat();
-            lngField.value = loc.lng();
-          }
-          var zona = (place.address_components || []).find(function (c) {
-            return c.types.includes('neighborhood') || c.types.includes('sublocality');
-          });
-          var zonaField = document.getElementById('zona-' + index);
-          if (zona) {
-            zonaField.value = zona.long_name;
-            zonaField.style.borderColor = '#3A8FA0';
-          } else {
-            zonaField.value = '';
-            zonaField.placeholder = 'Non trovata — inserisci manualmente';
-            zonaField.style.borderColor = '#e67e22';
-          }
-        });
+      // "Via Plinio 39, 20129 Milano" — imita il formatted_address di Google.
+      // Per i locali (osm establishment) Photon mette l'insegna in .name e la
+      // via nei campi street/housenumber: in indirizzo va la via, non l'insegna.
+      function formattaIndirizzo(pr) {
+        var via = [pr.street, pr.housenumber].filter(Boolean).join(' ');
+        var testa = via || pr.name || '';
+        var citta = [pr.postcode, pr.city || pr.town || pr.village].filter(Boolean).join(' ');
+        return [testa, citta].filter(Boolean).join(', ');
       }
 
-      function attachAutocompleteToNew(index) {
-        if (mapsReady) {
-          attachAutocomplete(index);
-        } else {
-          pendingAutocomplete.push(index);
+      // Etichetta della tendina: insegna in evidenza, indirizzo sotto.
+      function etichetta(pr) {
+        var via = [pr.street, pr.housenumber].filter(Boolean).join(' ');
+        var primaria = pr.name || via || '(senza nome)';
+        var secondaria = [
+          pr.name && via ? via : '',
+          pr.city || pr.town || pr.village || '',
+          pr.state || ''
+        ].filter(Boolean).join(', ');
+        return { primaria: primaria, secondaria: secondaria };
+      }
+
+      // La zona utile sta in locality ("Navigli", "Buenos Aires - Venezia").
+      // district su Milano restituisce il municipio ("Municipio 3"), che come
+      // etichetta di zona non serve a niente: si usa solo se non e' un municipio.
+      // Copertura OSM buona ma non garantita: se manca, campo da compilare a mano
+      // ed evidenziato in arancione, come faceva la versione Google.
+      function estraiZona(pr) {
+        if (pr.locality) return pr.locality;
+        if (pr.district && !/^municipio\b/i.test(pr.district)) return pr.district;
+        return '';
+      }
+
+      // In modalita' multipla il blocco statico e il primo blocco aggiunto
+      // condividono l'id indirizzo-0. getElementById darebbe sempre il primo:
+      // qui si prende il piu' recente non ancora inizializzato.
+      function trovaInput(index) {
+        var tutti = document.querySelectorAll('[id="indirizzo-' + index + '"]');
+        for (var i = tutti.length - 1; i >= 0; i--) {
+          if (tutti[i].dataset.acReady !== '1') return tutti[i];
         }
+        return null;
+      }
+
+      function attachAutocomplete(index) {
+        var input = trovaInput(index);
+        if (!input) return;
+        input.dataset.acReady = '1';
+
+        var lista = document.createElement('ul');
+        lista.className = 'ac-list';
+        lista.setAttribute('role', 'listbox');
+        lista.hidden = true;
+        input.insertAdjacentElement('afterend', lista);
+
+        var timer = null;
+        var controller = null;
+        var risultati = [];
+        var attivo = -1;
+
+        function chiudi() {
+          lista.hidden = true;
+          lista.innerHTML = '';
+          risultati = [];
+          attivo = -1;
+        }
+
+        function evidenzia(n) {
+          var voci = lista.querySelectorAll('li');
+          for (var i = 0; i < voci.length; i++) {
+            voci[i].classList.toggle('ac-active', i === n);
+          }
+          attivo = n;
+        }
+
+        function scegli(n) {
+          var f = risultati[n];
+          if (!f) return;
+          var pr = f.properties || {};
+          var coords = (f.geometry && f.geometry.coordinates) || [];
+
+          input.value = formattaIndirizzo(pr);
+          input.style.borderColor = '#3A8FA0';
+
+          var latField = document.getElementById('lat-' + index);
+          var lngField = document.getElementById('lng-' + index);
+          if (latField && lngField && coords.length === 2) {
+            lngField.value = coords[0];
+            latField.value = coords[1];
+          }
+
+          var zonaField = document.getElementById('zona-' + index);
+          var zona = estraiZona(pr);
+          if (zonaField) {
+            if (zona) {
+              zonaField.value = zona;
+              zonaField.style.borderColor = '#3A8FA0';
+            } else {
+              zonaField.value = '';
+              zonaField.placeholder = 'Non trovata — inserisci manualmente';
+              zonaField.style.borderColor = '#e67e22';
+            }
+          }
+          chiudi();
+        }
+
+        function disegna(features) {
+          risultati = features;
+          lista.innerHTML = '';
+          if (!features.length) { chiudi(); return; }
+
+          features.forEach(function (f, i) {
+            var e = etichetta(f.properties || {});
+            var li = document.createElement('li');
+            li.setAttribute('role', 'option');
+
+            // textContent e non innerHTML: i nomi arrivano da OSM, cioe' da
+            // dati di terzi che nessuno ha validato.
+            var forte = document.createElement('strong');
+            forte.textContent = e.primaria;
+            li.appendChild(forte);
+            if (e.secondaria) {
+              var span = document.createElement('span');
+              span.textContent = e.secondaria;
+              li.appendChild(span);
+            }
+
+            li.addEventListener('mousedown', function (ev) {
+              // mousedown e non click: il blur dell'input chiuderebbe la lista
+              // prima che il click arrivi.
+              ev.preventDefault();
+              scegli(i);
+            });
+            li.addEventListener('mouseenter', function () { evidenzia(i); });
+            lista.appendChild(li);
+          });
+          lista.hidden = false;
+          attivo = -1;
+        }
+
+        function interroga(q, bbox, segnale) {
+          var url = PHOTON_URL + '?q=' + encodeURIComponent(q) +
+            '&lang=' + PHOTON_LANG + '&limit=6&lat=' + BIAS_LAT + '&lon=' + BIAS_LON + bbox;
+          return fetch(url, { signal: segnale })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) { return (data && data.features) || []; });
+        }
+
+        function cerca(q) {
+          if (controller) controller.abort();
+          controller = new AbortController();
+          var segnale = controller.signal;
+          interroga(q, BBOX_MILANO, segnale)
+            .then(function (features) {
+              // Seconda chiamata solo se Milano non ha dato nulla.
+              return features.length ? features : interroga(q, '', segnale);
+            })
+            .then(function (features) { disegna(features.slice(0, 6)); })
+            .catch(function (err) {
+              // abort = ricerca sostituita da una piu' recente, non un errore.
+              if (err && err.name === 'AbortError') return;
+              chiudi();
+            });
+        }
+
+        input.addEventListener('input', function () {
+          var q = input.value.trim();
+          input.style.borderColor = '';
+          if (timer) clearTimeout(timer);
+          if (q.length < MIN_CHARS) { chiudi(); return; }
+          timer = setTimeout(function () { cerca(q); }, DEBOUNCE_MS);
+        });
+
+        input.addEventListener('keydown', function (ev) {
+          if (lista.hidden) return;
+          if (ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            evidenzia(Math.min(attivo + 1, risultati.length - 1));
+          } else if (ev.key === 'ArrowUp') {
+            ev.preventDefault();
+            evidenzia(Math.max(attivo - 1, 0));
+          } else if (ev.key === 'Enter') {
+            if (attivo >= 0) { ev.preventDefault(); scegli(attivo); }
+          } else if (ev.key === 'Escape') {
+            chiudi();
+          }
+        });
+
+        input.addEventListener('blur', function () { setTimeout(chiudi, 120); });
+      }
+
+      // I blocchi locale aggiunti a runtime chiamano questa: con Photon non c'e'
+      // nessuna libreria da attendere, quindi si aggancia subito.
+      function attachAutocompleteToNew(index) {
+        attachAutocomplete(index);
       }
 
       attachAutocompleteToNew(0);

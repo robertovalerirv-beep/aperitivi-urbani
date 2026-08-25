@@ -15,6 +15,22 @@ const { loc } = Astro.props;
 const { Content } = await render(loc);
 const visiteOrdinate = [...loc.data.visite].sort((a, b) => b.data.localeCompare(a.data));
 
+// La mappa usa le coordinate gia' presenti nel frontmatter: nessun geocoding
+// a runtime, nessuna API key. Se mancano restano indirizzo e link esterno.
+const haCoordinate =
+  typeof loc.data.lat === "number" && typeof loc.data.lng === "number";
+const indirizzoBase = loc.data.indirizzo ?? "";
+// La citta' si aggiunge solo se non e' gia' dentro l'indirizzo salvato.
+const cittaGiaPresente =
+  !loc.data.citta ||
+  indirizzoBase.toLowerCase().includes(String(loc.data.citta).toLowerCase());
+const indirizzoCompleto =
+  indirizzoBase + (cittaGiaPresente ? "" : ", " + loc.data.citta);
+// Link semplice, non una API: aprire Maps per le indicazioni non ha costo.
+const indicazioniUrl =
+  "https://www.google.com/maps/search/?api=1&query=" +
+  encodeURIComponent(indirizzoCompleto);
+
 // z.string().url() di Zod accetta "javascript:alert(1)": per il parser WHATWG
 // e' una URL sintatticamente valida. Renderizzata in href e' XSS, e la CSP non
 // aiuta perche' script-src ha 'unsafe-inline'. Allowlist esplicita di http/https
@@ -234,17 +250,19 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
         <p class="muted" style="font-size:0.95rem;margin-bottom:0.75rem">
           {loc.data.indirizzo}{loc.data.citta ? `, ${loc.data.citta}` : ""}
         </p>
-        <div style="border-radius:10px;overflow:hidden;border:1px solid var(--cream-border)">
-          <iframe
-            width="100%"
-            height="380"
-            style="border:0;display:block"
-            loading="lazy"
-            allowfullscreen
-            referrerpolicy="no-referrer-when-downgrade"
-            src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent((loc.data.indirizzo ?? "") + ", " + (loc.data.citta ?? "Milano"))}`}
-          ></iframe>
-        </div>
+        {haCoordinate && (
+          <div
+            id="mappa-locale"
+            data-lat={String(loc.data.lat)}
+            data-lng={String(loc.data.lng)}
+            data-nome={loc.data.nome}
+          ></div>
+        )}
+        <p style="margin:0.7rem 0 0;font-size:0.9rem">
+          <a href={indicazioniUrl} target="_blank" rel="noopener noreferrer">
+            Apri indicazioni ↗
+          </a>
+        </p>
       </section>
     )}
 
@@ -254,8 +272,64 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
   </article>
 </Layout>
 
+<script>
+  import L from "leaflet";
+  import "leaflet/dist/leaflet.css";
+
+  const el = document.getElementById("mappa-locale");
+  const lat = Number(el?.dataset.lat);
+  const lng = Number(el?.dataset.lng);
+
+  if (el && Number.isFinite(lat) && Number.isFinite(lng)) {
+    const map = L.map(el, {
+      center: [lat, lng],
+      zoom: 16,
+      // Mappa di contesto, non da esplorare: la rotella deve scorrere la pagina.
+      scrollWheelZoom: false,
+    });
+
+    // Tile CARTO Positron: nessuna API key. L'attribuzione a OpenStreetMap e
+    // CARTO e' obbligatoria per licenza, non toglierla.
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(map);
+
+    L.marker([lat, lng], {
+      title: el.dataset.nome || "",
+      icon: L.icon({
+        iconUrl:
+          "data:image/svg+xml;charset=UTF-8," +
+          encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">' +
+              '<path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24C32 7.163 24.837 0 16 0z" fill="#3a8fa0"/>' +
+              '<circle cx="16" cy="16" r="6" fill="#fbf5ec"/>' +
+              "</svg>"
+          ),
+        iconSize: [32, 40],
+        iconAnchor: [16, 40],
+      }),
+    }).addTo(map);
+  }
+</script>
+
 <style>
   .scheda { padding: 1.75rem; }
+
+  #mappa-locale {
+    width: 100%;
+    height: 380px;
+    border-radius: 10px;
+    border: 1px solid var(--cream-border);
+    /* overflow ritaglia le tile sul border-radius; position + z-index creano lo
+       stacking context che tiene i controlli Leaflet (z-index 800) al loro posto. */
+    overflow: hidden;
+    position: relative;
+    z-index: 0;
+    background: var(--cream, #fbf5ec);
+  }
   .scheda h3 { margin-top: 1.5rem; }
   @media (max-width: 640px) {
     .scheda { padding: 1.25rem; }

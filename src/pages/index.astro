@@ -31,7 +31,9 @@ const mapLocali = locali.map(l => ({
   zona: l.data.zona,
 })).filter(l => l.lat && l.lng);
 
-const mapLocaliJson = JSON.stringify(mapLocali);
+// Come ldJson qui sotto: il < va emesso come escape, altrimenti un nome di
+// locale che contenga "</script" chiuderebbe il tag e romperebbe la pagina.
+const mapLocaliJson = JSON.stringify(mapLocali).replace(/</g, "\\u003c");
 
 // Identita' del sito per Google: WebSite + autore. Serve a far capire che
 // dietro le recensioni c'e' una persona reale, non contenuto anonimo.
@@ -173,68 +175,85 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
   <p id="empty-state" style="display:none;text-align:center;padding:2rem;color:rgba(255,255,255,0.85)">
     Nessun locale corrisponde ai filtri selezionati.
   </p>
-<script is:inline define:vars={{ mapLocaliJson }}>
-(function() {
-  fetch('/api/maps-key')
-    .then(r => r.json())
-    .then(data => {
-      var s = document.createElement('script');
-      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + (data.key || '') + '&callback=initMap';
-      s.async = true; s.defer = true;
-      document.head.appendChild(s);
-    });
+<script type="application/json" id="map-data" is:inline set:html={mapLocaliJson}></script>
+<script>
+  import L from "leaflet";
+  import "leaflet/dist/leaflet.css";
 
-  window.initMap = function() {
-    var locali = JSON.parse(mapLocaliJson);
-    if (!locali.length) return;
+  type MapLocale = { slug: string; nome: string; lat: number; lng: number };
 
-    var bounds = new google.maps.LatLngBounds();
-    var map = new google.maps.Map(document.getElementById('map'), {
-      zoom: 13,
-      center: { lat: 45.4654, lng: 9.1859 },
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
+  const dataEl = document.getElementById("map-data");
+  const mapEl = document.getElementById("map");
 
-    locali.forEach(function(locale) {
-      var marker = new google.maps.Marker({
-        position: { lat: locale.lat, lng: locale.lng },
-        map: map,
-        title: locale.nome,
-        icon: {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+  if (dataEl && mapEl) {
+    const locali: MapLocale[] = JSON.parse(dataEl.textContent || "[]");
+
+    if (locali.length) {
+      const map = L.map(mapEl as HTMLElement, {
+        center: [45.4654, 9.1859],
+        zoom: 13,
+      });
+
+      // Tile CARTO Positron: raster chiaro, nessuna API key. L'attribuzione a
+      // OpenStreetMap e CARTO e' obbligatoria per licenza, non toglierla.
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        subdomains: "abcd",
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+
+      const icon = L.icon({
+        iconUrl:
+          "data:image/svg+xml;charset=UTF-8," +
+          encodeURIComponent(
             '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">' +
-            '<path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24C32 7.163 24.837 0 16 0z" fill="#3a8fa0"/>' +
-            '<circle cx="16" cy="16" r="6" fill="#fbf5ec"/>' +
-            '</svg>'
+              '<path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24C32 7.163 24.837 0 16 0z" fill="#3a8fa0"/>' +
+              '<circle cx="16" cy="16" r="6" fill="#fbf5ec"/>' +
+              "</svg>"
           ),
-          scaledSize: new google.maps.Size(32, 40),
-          anchor: new google.maps.Point(16, 40),
-        },
-      });
-      bounds.extend(marker.getPosition());
-
-      window._markersBySlug = window._markersBySlug || {};
-      window._markersBySlug[locale.slug] = marker;
-
-      var infoWindow = new google.maps.InfoWindow({
-        content: '<a href="/locali/' + locale.slug + '" style="font-family:sans-serif;font-weight:600;color:#1b3942;text-decoration:none">' + locale.nome + '</a>'
+        iconSize: [32, 40],
+        iconAnchor: [16, 40],
+        popupAnchor: [0, -36],
       });
 
-      marker.addListener('click', function() {
-        infoWindow.open(map, marker);
-      });
-    });
+      // Stesso contratto del vecchio codice Google (_markersBySlug[slug].setVisible):
+      // i filtri in fondo alla pagina lo usano per nascondere i marker esclusi.
+      const bySlug: Record<string, { setVisible: (v: boolean) => void }> = {};
+      const bounds = L.latLngBounds([]);
 
-    if (locali.length > 1) {
-      map.fitBounds(bounds);
-    } else {
-      map.setCenter({ lat: locali[0].lat, lng: locali[0].lng });
-      map.setZoom(15);
+      for (const locale of locali) {
+        const marker = L.marker([locale.lat, locale.lng], {
+          icon,
+          title: locale.nome,
+        }).addTo(map);
+
+        // Popup costruito via DOM: il nome del locale non finisce mai in innerHTML.
+        const link = document.createElement("a");
+        link.href = "/locali/" + locale.slug;
+        link.textContent = locale.nome;
+        link.style.cssText = "font-weight:600;color:#1b3942;text-decoration:none";
+        marker.bindPopup(link);
+
+        bounds.extend([locale.lat, locale.lng]);
+
+        let visible = true;
+        bySlug[locale.slug] = {
+          setVisible(v: boolean) {
+            if (v === visible) return;
+            visible = v;
+            if (v) marker.addTo(map);
+            else map.removeLayer(marker);
+          },
+        };
+      }
+
+      (window as unknown as { _markersBySlug: typeof bySlug })._markersBySlug = bySlug;
+
+      if (locali.length > 1) map.fitBounds(bounds, { padding: [30, 30] });
+      else map.setView([locali[0].lat, locali[0].lng], 15);
     }
-  };
-})();
+  }
 </script>
 </Layout>
 
@@ -250,6 +269,18 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
     height: 420px;
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    /* overflow: le tile quadrate vanno ritagliate dal border-radius.
+       z-index/position: Leaflet posiziona i suoi controlli fino a z-index 800;
+       senza uno stacking context qui coprirebbero le tendine dei filtri (z-index 20). */
+    overflow: hidden;
+    position: relative;
+    z-index: 0;
+  }
+
+  /* Sfondo mostrato mentre le tile caricano: evita il lampo bianco. */
+  #map.leaflet-container {
+    background: var(--cream, #fbf5ec);
+    font: inherit;
   }
 
   .filters {
