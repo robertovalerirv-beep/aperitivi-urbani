@@ -18,6 +18,7 @@ const FASCE = ["€","€€","€€€","€€€€","€€€€€"];
 const SENTIMENTS = ["entusiasta","positivo","neutro","tiepido","critico"];
 
 const initial = {
+  slug: d.slug,
   nome: d.nome,
   zona: d.zona ?? "",
   indirizzo: d.indirizzo ?? "",
@@ -150,10 +151,14 @@ const initial = {
 </Layout>
 
 <script id="initial-data" type="application/json" set:html={JSON.stringify(initial)}></script>
-<script define:vars={{ slug: d.slug }}>
+<script is:inline>
   // L'export ts in <script> di Astro viene bundlato; uso JS runtime classico.
   const STORAGE_KEY = "admin_pwd_v1";
   const initial = JSON.parse(document.getElementById("initial-data").textContent);
+  // Lo slug arriva dal JSON initial e non piu' da define:vars: cosi' questo
+  // script e' identico su tutte le schede admin e la CSP lo copre con un
+  // hash solo invece di uno per pagina.
+  const slug = initial.slug;
 
   const gate = document.getElementById("gate");
   const formWrap = document.getElementById("form-wrap");

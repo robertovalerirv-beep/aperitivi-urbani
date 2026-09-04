@@ -217,11 +217,15 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
     )}
 
     {loc.data.foto && loc.data.foto.length > 1 && (
-      <script is:inline define:vars={{ totale: loc.data.foto.length }}>
+      <script is:inline>
         (function() {
           var hero = document.getElementById('gallery-hero-img');
           var counter = document.getElementById('gallery-counter');
           var thumbs = document.querySelectorAll('.gallery-thumb');
+          // Il totale e' il numero di miniature: preso dal DOM invece che
+          // interpolato, lo script resta identico su tutte le schede e la
+          // CSP puo' coprirlo con un hash solo.
+          var totale = thumbs.length;
           thumbs.forEach(function(t) {
             t.addEventListener('click', function() {
               hero.src = t.getAttribute('data-full');
