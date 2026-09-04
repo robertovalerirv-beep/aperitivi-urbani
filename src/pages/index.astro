@@ -194,13 +194,14 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
         zoom: 13,
       });
 
-      // Tile CARTO Positron: raster chiaro, nessuna API key. L'attribuzione a
-      // OpenStreetMap e CARTO e' obbligatoria per licenza, non toglierla.
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        subdomains: "abcd",
+      // Tile OpenStreetMap standard: nessuna API key, nessun costo. CARTO ha
+      // iniziato a stampare "API KEY REQUIRED" sulle tile anonime, quindi non
+      // la usiamo piu'. L'attribuzione a OpenStreetMap e' obbligatoria per
+      // licenza: non toglierla.
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(map);
 
       const icon = L.icon({
@@ -281,6 +282,13 @@ const ldJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
   #map.leaflet-container {
     background: var(--cream, #fbf5ec);
     font: inherit;
+  }
+
+  /* Le tile OSM standard sono piu' colorate della vecchia Positron:
+     desaturarle e schiarirle tiene la mappa neutra e fa risaltare i
+     marker verdi. Il filtro tocca solo il pane delle tile, non i marker. */
+  #map :global(.leaflet-tile-pane) {
+    filter: saturate(0.35) brightness(1.06) contrast(0.92);
   }
 
   .filters {

@@ -2,7 +2,7 @@
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: https://*.basemaps.cartocdn.com; script-src 'self' https://static.cloudflareinsights.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://photon.komoot.io https://cloudflareinsights.com https://static.cloudflareinsights.com
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; script-src 'self' https://static.cloudflareinsights.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://photon.komoot.io https://cloudflareinsights.com https://static.cloudflareinsights.com
 
 /admin
   X-Robots-Tag: noindex, nofollow

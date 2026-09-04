@@ -33,8 +33,11 @@ con consenso scritto dell'autrice a riutilizzare i contenuti dei post.
 - Il file `netlify.toml` è conservato come fallback consultabile ma
   **il deploy automatico su Netlify è disattivato** — unico target: CF Pages.
 - Nessun backend, nessuna chiamata LLM a runtime lato pubblico.
-- Mappe: **Leaflet** + tile **CARTO Positron** (nessuna API key). L'attribuzione
-  OpenStreetMap/CARTO in mappa e' obbligatoria per licenza: non rimuoverla.
+- Mappe: **Leaflet** + tile **OpenStreetMap standard** (nessuna API key, nessun
+  costo). CARTO e' stato abbandonato: stampa "API KEY REQUIRED" sulle tile
+  anonime. L'attribuzione OpenStreetMap in mappa e' obbligatoria per licenza:
+  non rimuoverla. Le tile sono desaturate via CSS per tenere il look chiaro
+  della vecchia Positron.
 - Autocomplete indirizzi in /admin/nuovo: **Photon** (OpenStreetMap), senza chiave.
 - Claude gira **solo** in GitHub Actions, in fase di ingestion.
 
@@ -79,7 +82,7 @@ Non piu' necessaria: `INTAKE_PASSWORD` proteggeva il form intake pubblico,
 rimosso dal repo — il secret puo' essere cancellato dalla dashboard CF Pages.
 
 Non piu' necessaria: `GOOGLE_MAPS_API_KEY`. Le mappe non usano piu' Google:
-homepage e schede locale girano su Leaflet con tile CARTO, l'autocomplete
+homepage e schede locale girano su Leaflet con tile OpenStreetMap, l'autocomplete
 indirizzi in /admin/nuovo su Photon (OpenStreetMap). Nessuna delle due vuole
 una chiave — il secret puo' essere cancellato dalla dashboard CF Pages.
 
