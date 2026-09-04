@@ -1,6 +1,7 @@
 export const prerender = false;
 
 import type { APIRoute } from "astro";
+import { verificaPasswordAdmin } from "../../lib/admin-guard";
 
 const EDITABLE_SCALARS = ["nome", "zona", "indirizzo", "citta", "fascia_prezzo", "sentiment", "voto_dedotto", "sponsorizzato"] as const;
 const EDITABLE_ARRAYS = ["tipo"] as const;
@@ -159,9 +160,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch { return jsonResponse(400, { error: "Body JSON invalido" }); }
 
-  if (body?.password !== password) {
-    return jsonResponse(401, { error: "Password errata" });
-  }
+  // Il guard risponde 401 se la password e' sbagliata e 429 quando i
+  // tentativi diventano troppi: la logica sta in un posto solo.
+  const bloccato = await verificaPasswordAdmin(request, body?.password, password);
+  if (bloccato) return bloccato;
 
   if (body?.ping === true) {
     return jsonResponse(200, { ok: true });

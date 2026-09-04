@@ -1,6 +1,8 @@
 export const prerender = false;
 
 import type { APIRoute } from "astro";
+import { verificaPasswordAdmin } from "../../lib/admin-guard";
+import { erroreFoto } from "../../lib/foto-guard";
 
 function jsonResponse(status: number, body: object) {
   return new Response(JSON.stringify(body), {
@@ -252,9 +254,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return jsonResponse(400, { error: "Body JSON invalido" });
     }
 
-    if (body?.password !== password) {
-      return jsonResponse(401, { error: "Password errata" });
-    }
+    // Il guard risponde 401 se la password e' sbagliata e 429 quando i
+    // tentativi diventano troppi: la logica sta in un posto solo.
+    const bloccato = await verificaPasswordAdmin(request, body?.password, password);
+    if (bloccato) return bloccato;
 
     const { url_post, data_visita, caption, note_reel, locali } = body;
     if (!url_post || typeof url_post !== "string" || !url_post.trim()) {
@@ -272,6 +275,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     for (const locale of locali) {
       const nome = stripNewlines(locale.nome);
       const slug = makeSlug(nome);
+
+      // Le foto arrivano come base64 dal browser: qui si controlla che siano
+      // davvero JPEG, non troppo pesanti e non troppe. Vedi lib/foto-guard.
+      const problemaFoto = erroreFoto(locale.foto);
+      if (problemaFoto) {
+        results.push({ slug: slug || nome || "(vuoto)", success: false, commit_url: null, foto_salvate: 0, error: problemaFoto });
+        continue;
+      }
 
       if (!slug) {
         results.push({ slug: nome || "(vuoto)", success: false, commit_url: null, foto_salvate: 0, error: "Nome non valido" });
