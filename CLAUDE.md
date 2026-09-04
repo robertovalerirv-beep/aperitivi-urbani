@@ -30,8 +30,6 @@ con consenso scritto dell'autrice a riutilizzare i contenuti dei post.
 - Frontend: **Astro** (statico), buildato in CI.
 - Continuous deployment su **Cloudflare Pages** da branch `main`
   (progetto: `aperitivi-urbani`, URL: `https://aperitivi-urbani.pages.dev`).
-- Il file `netlify.toml` è conservato come fallback consultabile ma
-  **il deploy automatico su Netlify è disattivato** — unico target: CF Pages.
 - Nessun backend, nessuna chiamata LLM a runtime lato pubblico.
 - Mappe: **Leaflet** + tile **OpenStreetMap standard** (nessuna API key, nessun
   costo). CARTO e' stato abbandonato: stampa "API KEY REQUIRED" sulle tile
@@ -66,8 +64,7 @@ con consenso scritto dell'autrice a riutilizzare i contenuti dei post.
 ├── scripts/validate-locali.mjs
 ├── src/                      # Astro (frontend)
 ├── astro.config.mjs
-├── package.json
-└── netlify.toml              # conservato come fallback, non deploy attivo
+└── package.json
 ```
 
 ## Variabili d'ambiente su Cloudflare Pages (produzione)
@@ -91,6 +88,6 @@ Nota: il beacon Cloudflare Web Analytics è hardcoded in `src/layouts/Layout.ast
 
 ## Nota per nuovi siti creator
 Ogni nuovo sito creator si crea **direttamente su Cloudflare Pages** (skill
-`creator-site-clone`), mai su Netlify. Il sito aperitivi-urbani è il template
+`creator-site-clone`). Il sito aperitivi-urbani è il template
 di riferimento: stesso adapter `@astrojs/cloudflare`, stesso `output: "static"`,
 stessa struttura secrets su CF Pages.
