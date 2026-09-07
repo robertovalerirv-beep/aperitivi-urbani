@@ -2,7 +2,6 @@ export const prerender = false;
 
 import type { APIRoute } from "astro";
 import { verificaPasswordAdmin } from "../../lib/admin-guard";
-import { erroreFoto } from "../../lib/foto-guard";
 
 function jsonResponse(status: number, body: object) {
   return new Response(JSON.stringify(body), {
@@ -275,14 +274,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     for (const locale of locali) {
       const nome = stripNewlines(locale.nome);
       const slug = makeSlug(nome);
-
-      // Le foto arrivano come base64 dal browser: qui si controlla che siano
-      // davvero JPEG, non troppo pesanti e non troppe. Vedi lib/foto-guard.
-      const problemaFoto = erroreFoto(locale.foto);
-      if (problemaFoto) {
-        results.push({ slug: slug || nome || "(vuoto)", success: false, commit_url: null, foto_salvate: 0, error: problemaFoto });
-        continue;
-      }
 
       if (!slug) {
         results.push({ slug: nome || "(vuoto)", success: false, commit_url: null, foto_salvate: 0, error: "Nome non valido" });
