@@ -442,7 +442,7 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
 
       attachAutocompleteToNew(0);
 
-      function resizeImage(file, maxPx) {
+      function resizeImage(file) {
         return new Promise(function (resolve, reject) {
           var reader = new FileReader();
           reader.onerror = function () { reject(new Error("Impossibile leggere il file \"" + file.name + "\".")); };
@@ -450,13 +450,11 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
             var img = new Image();
             img.onerror = function () { reject(new Error("\"" + file.name + "\": il browser non riesce ad aprire questo file. Se e' una foto HEIC dell'iPhone, convertila in JPEG e riprova.")); };
             img.onload = function () {
+              // Nessun limite di grandezza: la foto va su alla sua risoluzione
+              // originale. Si passa dalla canvas solo per normalizzare il
+              // formato in JPEG, non per rimpicciolire.
               var w = img.width;
               var h = img.height;
-              if (w > maxPx || h > maxPx) {
-                var ratio = Math.min(maxPx / w, maxPx / h);
-                w = Math.round(w * ratio);
-                h = Math.round(h * ratio);
-              }
               var canvas = document.createElement('canvas');
               canvas.width = w;
               canvas.height = h;
@@ -670,7 +668,7 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
         // per sempre e sembrava che il caricamento non partisse nemmeno.
         const resizeAll = () => Promise.all(localiInput.map(async (l) => {
           const files = l.fotoFiles;
-          const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1200)));
+          const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File) => Promise<string>>).resizeImage(f)));
           return { indirizzo: l.indirizzo, zona: l.zona, foto, lat: l.lat, lng: l.lng };
         }));
         let localiWithFoto: Awaited<ReturnType<typeof resizeAll>>;
