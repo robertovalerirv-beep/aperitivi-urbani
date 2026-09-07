@@ -2,7 +2,6 @@ export const prerender = false;
 
 import type { APIRoute } from "astro";
 import { verificaPasswordAdmin } from "../../lib/admin-guard";
-import { erroreFoto } from "../../lib/foto-guard";
 
 function jsonResponse(status: number, body: object) {
   return new Response(JSON.stringify(body), {
@@ -122,12 +121,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const removeNames = Array.isArray(body?.remove) ? (body.remove as string[]) : [];
     if (addPhotos.length === 0 && removeNames.length === 0) {
       return jsonResponse(400, { error: "Nessuna modifica da applicare" });
-    }
-
-    // Stesso controllo del salvataggio: JPEG, peso e numero. Vedi lib/foto-guard.
-    const problemaFoto = erroreFoto(addPhotos);
-    if (problemaFoto) {
-      return jsonResponse(400, { error: problemaFoto });
     }
 
     const mdPath = `content/locali/${slug}.md`;
