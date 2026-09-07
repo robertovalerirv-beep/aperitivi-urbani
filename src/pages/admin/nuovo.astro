@@ -1,8 +1,19 @@
 ---
 export const prerender = false;
+
 import { getCollection } from "astro:content";
 const _locali = await getCollection("locali");
 const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].sort();
+
+// Questa rotta e' SSR: public/_headers vale solo per i file statici, qui non
+// arriva. Senza no-store il browser puo' servire una copia vecchia del
+// pannello — la pagina sembra non aggiornarsi mai e resta il JavaScript
+// della build precedente. Gli altri header replicano quelli di _headers.
+Astro.response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+Astro.response.headers.set("X-Frame-Options", "DENY");
+Astro.response.headers.set("X-Content-Type-Options", "nosniff");
+Astro.response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
 ---
 
 <!doctype html>

@@ -6,7 +6,11 @@ import { verificaPasswordAdmin } from "../../lib/admin-guard";
 function jsonResponse(status: number, body: object) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      // Risposte del pannello admin: non devono finire in nessuna cache.
+      "cache-control": "no-store",
+    },
   });
 }
 
