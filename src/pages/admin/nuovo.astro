@@ -432,44 +432,26 @@ const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].s
       attachAutocompleteToNew(0);
 
       function resizeImage(file, maxPx) {
-        return new Promise(function (resolve) {
+        return new Promise(function (resolve, reject) {
           var reader = new FileReader();
+          reader.onerror = function () { reject(new Error("Impossibile leggere il file \"" + file.name + "\".")); };
           reader.onload = function (e) {
             var img = new Image();
+            img.onerror = function () { reject(new Error("\"" + file.name + "\": il browser non riesce ad aprire questo file. Se e' una foto HEIC dell'iPhone, convertila in JPEG e riprova.")); };
             img.onload = function () {
               var w = img.width;
               var h = img.height;
-              if (w <= maxPx && h <= maxPx) {
-                var c = document.createElement('canvas');
-                c.width = w; c.height = h;
-                var cx = c.getContext('2d');
-                cx.imageSmoothingEnabled = true;
-                cx.imageSmoothingQuality = 'high';
-                cx.drawImage(img, 0, 0, w, h);
-                resolve(c.toDataURL('image/jpeg', 0.88).split(',')[1]);
-                return;
-              }
-              var ratio = Math.min(maxPx / w, maxPx / h);
-              var tw = Math.round(w * ratio);
-              var th = Math.round(h * ratio);
-              var src = img, sw = w, sh = h;
-              while (Math.min(tw / sw, th / sh) < 0.5) {
-                var half = document.createElement('canvas');
-                half.width = Math.round(sw / 2);
-                half.height = Math.round(sh / 2);
-                var hx = half.getContext('2d');
-                hx.imageSmoothingEnabled = true;
-                hx.imageSmoothingQuality = 'high';
-                hx.drawImage(src, 0, 0, half.width, half.height);
-                src = half; sw = half.width; sh = half.height;
+              if (w > maxPx || h > maxPx) {
+                var ratio = Math.min(maxPx / w, maxPx / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
               }
               var canvas = document.createElement('canvas');
-              canvas.width = tw; canvas.height = th;
-              var ctx = canvas.getContext('2d');
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = 'high';
-              ctx.drawImage(src, 0, 0, tw, th);
-              resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1]);
+              canvas.width = w;
+              canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+              resolve(dataUrl.split(',')[1]);
             };
             img.src = e.target.result;
           };
@@ -672,12 +654,24 @@ const zoneList = [...new Set(_locali.map((l) => l.data.zona).filter(Boolean))].s
         loader.style.display = '';
         content.style.display = 'none';
 
-        // Resize foto
-        const localiWithFoto = await Promise.all(localiInput.map(async (l) => {
+        // Resize foto. Se un file non si apre (HEIC dell'iPhone, file corrotto)
+        // la promise viene rifiutata: senza questo try il loader restava a girare
+        // per sempre e sembrava che il caricamento non partisse nemmeno.
+        const resizeAll = () => Promise.all(localiInput.map(async (l) => {
           const files = l.fotoFiles;
-          const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1600)));
+          const foto = await Promise.all(files.map((f) => (window as unknown as Record<string, (f: File, n: number) => Promise<string>>).resizeImage(f, 1200)));
           return { indirizzo: l.indirizzo, zona: l.zona, foto, lat: l.lat, lng: l.lng };
         }));
+        let localiWithFoto: Awaited<ReturnType<typeof resizeAll>>;
+        try {
+          localiWithFoto = await resizeAll();
+        } catch (e) {
+          loader.style.display = 'none';
+          goToStep(0);
+          err.textContent = (e as Error).message;
+          err.style.display = '';
+          return;
+        }
 
         let enrichData: Record<string, unknown> = {};
         try {
