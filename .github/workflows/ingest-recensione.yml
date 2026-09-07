@@ -39,10 +39,10 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          mkdir -p public/img/locali/_tmp
+          mkdir -p public/images/locali/_tmp
           node scripts/extract-issue-images.mjs \
             --issue "$ISSUE_NUMBER" \
-            --out public/img/locali/_tmp
+            --out public/images/locali/_tmp
 
       - name: Run Claude Code (ingestion headless)
         uses: anthropics/claude-code-action@v1
@@ -50,7 +50,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: '--allowedTools Read,Write,Edit,Glob,Grep,Bash'
           show_full_output: true
-          # Il workflow non deve toccare nulla fuori da content/ e public/img/locali/
+          # Il workflow non deve toccare nulla fuori da content/ e public/images/locali/
           prompt: |
             Sei l'agente di ingestion del sito Aperitivi Urbani.
             Devi processare la GitHub Issue #${{ github.event.issue.number }}
@@ -58,7 +58,7 @@ jobs:
 
             REGOLE ASSOLUTE:
             1. Estrai i campi del locale leggendo SOLO il corpo dell'issue
-               (URL post, caption, data) e le foto in public/img/locali/_tmp/.
+               (URL post, caption, data) e le foto in public/images/locali/_tmp/.
             2. Valida l'output contro schemas/locale-schema.json. Se un campo
                non è desumibile, mettilo a null. NON inventare.
             3. sponsorizzato = true SOLO con segnali espliciti (#adv, #ad,
@@ -100,8 +100,8 @@ jobs:
                con "singola" o "lista" coerentemente con la classificazione del
                punto 4. È il segnale per il revisore che molti campi sono null
                per design, non per estrazione fallita.
-            7. Sposta le foto da public/img/locali/_tmp/ a
-               public/img/locali/<slug>/ rinominandole foto-1.jpg, foto-2.jpg…
+            7. Sposta le foto da public/images/locali/_tmp/ a
+               public/images/locali/<slug>/ rinominandole foto-1.jpg, foto-2.jpg…
                Aggiorna i path nel campo `foto` della visita. Per i post "lista"
                le foto del roundup di solito NON sono attribuibili al singolo
                locale: lascia `foto: []` su tutte le entry generate, a meno che
@@ -110,7 +110,7 @@ jobs:
                su ogni file toccato.
             9. NON modificare alcun file fuori da:
                - content/locali/
-               - public/img/locali/
+               - public/images/locali/
             10. Al termine stampa un riepilogo che includa:
                 - tipo di post processato ("singola" o "lista")
                 - numero di locali nuovi creati e numero di locali aggiornati
