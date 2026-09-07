@@ -49,7 +49,7 @@ body:
     id: foto
     attributes:
       label: Foto del locale (opzionale)
-      description: Trascina qui una o più foto. GitHub le caricherà come allegati e l'automazione le sposterà in `public/img/locali/<slug>/`.
+      description: Trascina qui una o più foto. GitHub le caricherà come allegati e l'automazione le sposterà in `public/images/locali/<slug>/`.
     validations:
       required: false
 
